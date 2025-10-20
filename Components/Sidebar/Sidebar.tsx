@@ -23,29 +23,29 @@ import {
 // ✅ Updated menu to match UI
 const menu = {
   main: [
-    { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard/dashboard" },
-    { label: "Analytics", icon: BarChart2, path: "/dashboard/analysis" },
-    { label: "Notifications", icon: Bell, path: "/dashboard/notifications" },
+    { label: "Dashboard", icon: LayoutDashboard, path: "/pages/dashboard" },
+    { label: "Analytics", icon: BarChart2, path: "/pages/analytics" },
+    { label: "Notifications", icon: Bell, path: "/pages/notifications" },
   ],
   resourceOrderManagement: [
-    { label: "Carousel Management", icon: Calendar, path: "/dashboard/carousel" },
+    { label: "Carousel Management", icon: Calendar, path: "/pages/carousel" },
     {
       label: "Inventory Management",
       icon: Package,
-       path: "/dashboard/InventoryManagement"
+       path: "/pages/inventory"
     },
-    { label: "Order Management", icon: Package, path: "/dashboard/orders" },
-    { label: "Customer Management", icon: Users, path: "/dashboard/customers" },
-    { label: "Brand Management", icon: Tag, path: "/dashboard/brands" },
-    { label: "Refund Management", icon: RefreshCw, path: "/dashboard/refunds" },
-    { label: "Blog Management", icon: PenSquare, path: "/dashboard/blogs" },
+    { label: "Order Management", icon: Package, path: "/pages/order" },
+    { label: "Customer Management", icon: Users, path: "/pages/customers" },
+    { label: "Brand Management", icon: Tag, path: "pages/brands" },
+    { label: "Refund Management", icon: RefreshCw, path: "/pages/refunds" },
+    { label: "Blog Management", icon: PenSquare, path: "/pages/blogs" },
   ],
   pricing: [
-    { label: "Service Pricing", icon: DollarSign, path: "/dashboard/service-pricing" },
-    { label: "Discount Code", icon: DollarSign, path: "/dashboard/discount-codes" },
+    { label: "Service Pricing", icon: DollarSign, path: "/pagesservice-pricing" },
+    { label: "Discount Code", icon: DollarSign, path: "/pages/discount-codes" },
   ],
   personal: [
-    { label: "Profile", icon: User, path: "/dashboard/profile" },
+    { label: "Profile", icon: User, path: "/pages/profile" },
     { label: "Logout", icon: LogOut, danger: true, path: "/auth/signin" },
   ],
 };
