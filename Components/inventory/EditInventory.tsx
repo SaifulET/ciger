@@ -4,6 +4,7 @@ import { ChevronDown, X } from 'lucide-react';
 import { ArrowLeft02Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 const InventoryEditItem = () => {
   // Example existing product (you can replace it with API data)
@@ -35,6 +36,7 @@ const InventoryEditItem = () => {
     Books: ['Fiction', 'Non-Fiction', 'Educational'],
   };
   const brands = ['Samsung', 'Apple', 'Sony', 'LG', 'Generic'];
+  const router = useRouter();
 
   useEffect(() => {
     if (editorRef.current && formData.productDescription) {
@@ -82,12 +84,15 @@ const InventoryEditItem = () => {
       updatedAt: new Date().toISOString(),
     };
     console.log('Product updated:', updatedProduct);
-    alert('Product updated! Check console for details.');
+    router.push("/pages/inventory")
+    // alert('Product updated! Check console for details.');
   };
 
   const handleCancel = () => {
     setFormData(existingProduct);
     if (editorRef.current) editorRef.current.innerHTML = existingProduct.productDescription;
+    router.push("/pages/inventory")
+
   };
 
   const getSubCategoryOptions = () => {
@@ -112,6 +117,7 @@ const InventoryEditItem = () => {
       const html = editorRef.current.innerHTML;
       setFormData(prev => ({ ...prev, productDescription: html }));
     }
+
   };
 
   const insertListItem = (type: 'bullet' | 'ordered') => {
@@ -136,7 +142,7 @@ const InventoryEditItem = () => {
     <div className="min-h-screen ml-10">
       <div>
         {/* Header */}
-        <div className="flex items-center justify-between mb-8 py-6 rounded-lg bg-white">
+        <div className="flex items-center justify-between mb-8 py-6 px-4 rounded-lg bg-white">
           <div className="flex items-center gap-3">
             <Link href="/pages/inventory" className="flex pl-5">
               <button className="hover:text-gray-900">

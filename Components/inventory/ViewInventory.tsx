@@ -39,7 +39,8 @@ const InventoryViewItem = () => {
   };
 
   const handleEdit = () => {
-    router.push(`/pages/inventory/${product.id}`);
+    // router.push(`/pages/inventory/editItem/${product.id}`);
+    router.push(`/pages/inventory/editItem`);
   };
 
   return (
@@ -64,7 +65,7 @@ const InventoryViewItem = () => {
             onClick={handleDelete}
             className="px-6 py-2  bg-red-600  text-white rounded-lg font-medium   transition flex"
           >
-           <HugeiconsIcon icon={Delete02Icon} className='w-24'/> Delete
+           <HugeiconsIcon icon={Delete02Icon} /> Delete
           </button>
           <button
             onClick={handleEdit}
