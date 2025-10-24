@@ -4,8 +4,17 @@ import { Search, Edit, Eye, Trash2, ChevronLeft, ChevronRight } from 'lucide-rea
 import { AddSquareIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 
-// Sample JSON data
-const inventoryData = [
+// Define TypeScript interface for inventory items
+interface InventoryItem {
+  id: number;
+  name: string;
+  price: number;
+  stock: number;
+  image: string;
+}
+
+// Sample JSON data with proper typing
+const inventoryData: InventoryItem[] = [
   { id: 1, name: 'Beverage Cola', price: 223.22, stock: 25, image: '🥤' },
   { id: 2, name: 'Apple Juice', price: 150.00, stock: 18, image: '🧃' },
   { id: 3, name: 'Orange Juice', price: 160.50, stock: 22, image: '🧃' },
@@ -41,20 +50,22 @@ export default function InventoryManagement() {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
 
-  const handleDelete = (id) => {
+  // Fixed: Added proper type for id parameter
+  const handleDelete = (id: number) => {
     if (confirm('Are you sure you want to delete this item?')) {
       // Delete logic would go here
       console.log('Deleted item:', id);
     }
   };
 
-  const handleSearch = (e) => {
+  // Fixed: Added proper type for event parameter
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
     setCurrentPage(1); // Reset to first page on search
   };
 
-  const getPaginationButtons = () => {
-    const buttons = [];
+  const getPaginationButtons = (): number[] => {
+    const buttons: number[] = [];
     const maxButtons = 5;
     let startPage = Math.max(1, currentPage - 2);
     const endPage = Math.min(totalPages, startPage + maxButtons - 1);
@@ -70,7 +81,7 @@ export default function InventoryManagement() {
   };
 
   return (
-    <div className=" px-6">
+    <div className="px-6">
       <div className="">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 p-6 bg-white rounded-lg">
@@ -153,7 +164,8 @@ export default function InventoryManagement() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
+                    {/* Fixed: Added proper type for colSpan */}
+                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
                       No items found
                     </td>
                   </tr>
