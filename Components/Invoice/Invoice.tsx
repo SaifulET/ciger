@@ -1,6 +1,8 @@
 "use client"
 import React, { useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Image from 'next/image';
+import logo from "@/public/logo.svg"
 
 // Types
 interface InvoiceData {
@@ -300,7 +302,8 @@ const generateAndDownloadPDF = (): void => {
   let yPos = 20;
   doc.setFontSize(24);
   doc.setFont('helvetica', 'bold');
-  doc.text('Logo', margin, yPos);
+
+  doc.text('SMOKENZA', margin, yPos);
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
@@ -364,7 +367,7 @@ const generateAndDownloadPDF = (): void => {
   doc.text(addressLines, margin + 5, addressY + 17);
 
   // ---------------- Order Summary (Rounded Table) ----------------
-  let summaryY = addressY + addressHeight + 5;
+  const summaryY = addressY + addressHeight + 5;
   const tableHeaderHeight = 8;
   const rowHeight = 6;
   const summaryHeight = tableHeaderHeight + (invoiceData.items.length * rowHeight) + 35; // includes totals
@@ -430,7 +433,8 @@ const generateAndDownloadPDF = (): void => {
     <div className="min-h-screen bg-white p-8 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex justify-between items-start mb-12">
-        <div className="text-2xl font-bold">Logo</div>
+        <div className=""><Image src={logo} alt="ogo" width={150} height={150} /></div>
+        <div></div>
         <div className="text-right text-sm">
           <div>{invoiceData.companyPhone}</div>
           <div>{invoiceData.companyEmail}</div>

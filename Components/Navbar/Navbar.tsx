@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
-import logo from "@/public/logo.png"
+import logo from "@/public/logo.svg"
 import Image from "next/image";
 import {
   ArrowDown01Icon,
@@ -28,7 +28,7 @@ const Navbar: React.FC = () => {
     <div className="p-0  md:relative   md:left-1/2 md:transform md:-translate-x-1/2  md:h-[116px] w-full bg-[#F5F5F5]">
       <nav className="flex justify-between m-0 p-0 items-center px-4 md:px-16 py-4 md:py-8 w-full h-full bg-[#ffffff]">
        
-        <Image src={logo} alt="logo"  width={100} height={100} className="rounded-full" />
+        <Image src={logo} alt="logo"  width={150} height={150} className="rounded-full " />
 
         {/* Desktop + Medium Menu */}
         <div className="hidden md:flex items-center gap-16 lg:gap-18 w-auto ">
@@ -53,13 +53,13 @@ const Navbar: React.FC = () => {
               <div className="absolute top-20 pr-5 mt-2 bg-[#FFFAE6] rounded-lg shadow-lg border border-gray-300 z-50 ">
                 <div className="flex flex-col text-left">
                   <a
-                    href="#"
+                    href="/pages/profile"
                     className=" flex gap-2 px-4 py-3 border-b hover:bg-yellow-50 hover:text-yellow-600 border-[#AEAEAE]"
                   >
                    <HugeiconsIcon icon={UserIcon} /> Profile
                   </a>
                   <a
-                    href="/home"
+                    href="/auth/signin"
                     className="px-4  py-3 rounded-b-lg hover:bg-yellow-50 hover:text-yellow-600"
                   >
                     <span className="flex gap-2">

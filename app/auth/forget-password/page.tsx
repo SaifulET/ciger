@@ -6,7 +6,7 @@ import { Mail, ArrowLeft } from "lucide-react";
 import { NextPage } from "next";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import logo from "@/public/logo.png"
+import logo from "@/public/logo.svg"
 
 const ForgotPasswordPage: NextPage = () => {
   const [email, setEmail] = useState<string>("");
@@ -42,7 +42,7 @@ const ForgotPasswordPage: NextPage = () => {
           <div className="w-full max-w-[500px] h-24 flex items-center justify-center">
             <div className="text-center">
               {/* <Image src={Logo} alt='logo'/> */}
-              <Image src={logo} alt="logo" width={100} height={100} className='rounded-full'/>
+              <Image src={logo} alt="logo" width={150} height={150} className='rounded-full'/>
             </div>
           </div>
 

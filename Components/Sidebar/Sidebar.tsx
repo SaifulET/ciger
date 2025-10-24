@@ -1,66 +1,119 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  BarChart2,
-  Bell,
-  Calendar,
-  Package,
-  Users,
-  Tag,
-  RefreshCw,
-  PenSquare,
-  DollarSign,
-  User,
-  LogOut,
   Menu,
   X,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
+import { Analytics01Icon, BrandfetchIcon, Calendar03Icon, DashboardSquare01Icon, Image01Icon, Logout01Icon, Money04Icon, MoneyBag01Icon, Notification01Icon, PackageIcon, PencilEdit02Icon, UserGroupIcon, UserIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 
-// ✅ Updated menu to match UI
-const menu = {
+// ✅ Define proper TypeScript interfaces
+interface MenuItem {
+  label: string;
+  icon: React.ReactNode;
+  path?: string;
+  danger?: boolean;
+  children?: MenuItem[];
+}
+
+interface MenuStructure {
+  main: MenuItem[];
+  resourceOrderManagement: MenuItem[];
+  pricing: MenuItem[];
+  personal: MenuItem[];
+}
+
+// ✅ Updated menu to match UI with proper typing
+const menu: MenuStructure = {
   main: [
-    { label: "Dashboard", icon: LayoutDashboard, path: "/pages/dashboard" },
-    { label: "Analytics", icon: BarChart2, path: "/pages/analytics" },
-    { label: "Notifications", icon: Bell, path: "/pages/notifications" },
+    { label: "Dashboard", icon: <HugeiconsIcon icon={DashboardSquare01Icon} />, path: "/pages/dashboard" },
+    { label: "Analytics", icon: <HugeiconsIcon icon={Analytics01Icon} />, path: "/pages/analytics" },
+    { label: "Notifications", icon: <HugeiconsIcon icon={Notification01Icon} />, path: "/pages/notifications" },
   ],
   resourceOrderManagement: [
-    { label: "Carousel Management", icon: Calendar, path: "/pages/carousel" },
+    { label: "Carousel Management", icon: <HugeiconsIcon icon={Image01Icon} />, path: "/pages/carousel" },
     {
       label: "Inventory Management",
-      icon: Package,
-       path: "/pages/inventory"
+      icon: <HugeiconsIcon icon={PackageIcon} />,
+      path: "/pages/inventory"
     },
-    { label: "Order Management", icon: Package, path: "/pages/order" },
-    { label: "Customer Management", icon: Users, path: "/pages/customers" },
-    { label: "Brand Management", icon: Tag, path: "pages/brands" },
-    { label: "Refund Management", icon: RefreshCw, path: "/pages/refunds" },
-    { label: "Blog Management", icon: PenSquare, path: "/pages/blogs" },
+    { label: "Order Management", icon: <HugeiconsIcon icon={Calendar03Icon} />, path: "/pages/order" },
+    { label: "Customer Management", icon: <HugeiconsIcon icon={UserGroupIcon} />, path: "/pages/customers" },
+    { label: "Brand Management", icon: <HugeiconsIcon icon={BrandfetchIcon} />, path: "/pages/brand" },
+    { label: "Refund Management", icon: <HugeiconsIcon icon={MoneyBag01Icon} />, path: "/pages/refunds" },
+    { label: "Blog Management", icon: <HugeiconsIcon icon={PencilEdit02Icon} />, path: "/pages/blogs" },
   ],
   pricing: [
-    { label: "Service Pricing", icon: DollarSign, path: "/pagesservice-pricing" },
-    { label: "Discount Code", icon: DollarSign, path: "/pages/discount-codes" },
+    { label: "Service Pricing", icon: <HugeiconsIcon icon={Money04Icon} />, path: "/pages/servicePricing" },
+    { label: "Discount Code", icon: <HugeiconsIcon icon={Money04Icon} />, path: "/pages/discountCode" },
   ],
   personal: [
-    { label: "Profile", icon: User, path: "/pages/profile" },
-    { label: "Logout", icon: LogOut, danger: true, path: "/auth/signin" },
+    { label: "Profile", icon: <HugeiconsIcon icon={UserIcon} />, path: "/pages/profile" },
+    { label: "Logout", icon: <HugeiconsIcon icon={Logout01Icon} />, danger: true, path: "/auth/signin" },
   ],
 };
 
 const Sidebar = () => {
   const router = useRouter();
+  const pathname = usePathname();
   const [activeItem, setActiveItem] = useState<string>("Dashboard");
   const [isOpen, setIsOpen] = useState(false);
   const [openDropdowns, setOpenDropdowns] = useState<string[]>([]);
 
-  // Load from localStorage
+  // Function to get the base path (first 2 segments)
+  const getBasePath = (path: string) => {
+    const segments = path.split('/').filter(segment => segment.length > 0);
+    return '/' + segments.slice(0, 2).join('/');
+  };
+
+  // Function to find menu item by path
+  const findMenuItemByPath = (path: string): MenuItem | null => {
+    const basePath = getBasePath(path);
+    
+    // Search through all menu sections
+    const allMenuItems = [
+      ...menu.main,
+      ...menu.resourceOrderManagement,
+      ...menu.pricing,
+      ...menu.personal
+    ];
+    
+    return allMenuItems.find(item => item.path === basePath) || null;
+  };
+
+  // Function to find parent section for dropdown
+  const findParentSection = (itemLabel: string): string | null => {
+    if (menu.main.some(item => item.label === itemLabel)) return "Main";
+    if (menu.resourceOrderManagement.some(item => item.label === itemLabel)) return "Resource & Order Management";
+    if (menu.pricing.some(item => item.label === itemLabel)) return "Pricing & Discounts";
+    if (menu.personal.some(item => item.label === itemLabel)) return "Personal Information";
+    return null;
+  };
+
+  // Set active item based on current URL when component mounts or pathname changes
   useEffect(() => {
+    const currentMenuItem = findMenuItemByPath(pathname);
+    if (currentMenuItem) {
+      setActiveItem(currentMenuItem.label);
+      
+      // Also open the parent dropdown if applicable
+      const parentSection = findParentSection(currentMenuItem.label);
+      if (parentSection) {
+        setOpenDropdowns([parentSection]);
+      }
+    }
+
+    // Load from localStorage (for backward compatibility)
     const savedItem = localStorage.getItem("activeSidebarItem");
     const savedDropdowns = localStorage.getItem("openDropdowns");
-    if (savedItem) setActiveItem(savedItem);
+    
+    if (savedItem && !currentMenuItem) {
+      setActiveItem(savedItem);
+    }
+    
     if (savedDropdowns) {
       try {
         setOpenDropdowns(JSON.parse(savedDropdowns));
@@ -68,7 +121,7 @@ const Sidebar = () => {
         setOpenDropdowns([]);
       }
     }
-  }, []);
+  }, [pathname]);
 
   // Save active and dropdown states
   useEffect(() => {
@@ -78,14 +131,6 @@ const Sidebar = () => {
   useEffect(() => {
     localStorage.setItem("openDropdowns", JSON.stringify(openDropdowns));
   }, [openDropdowns]);
-
-  type MenuItem = {
-    label: string;
-    path?: string;
-    icon?: React.ComponentType<{ className?: string }>;
-    danger?: boolean;
-    children?: { label: string; path?: string }[];
-  };
 
   const handleItemClick = (item: MenuItem, parentLabel?: string) => {
     if (item.children && item.children.length > 0) {
@@ -118,7 +163,7 @@ const Sidebar = () => {
           `}
         >
           <div className="flex items-center gap-3">
-            {item.icon && <item.icon className="w-5 h-5" />}
+            {item.icon}
             {item.label}
           </div>
           {hasChildren && (
@@ -138,7 +183,7 @@ const Sidebar = () => {
   };
 
   const SidebarContent = () => (
-    <aside className="w-full sm:w-72 md:w-80 lg:w-[336px] min-h-screen flex flex-col gap-6 p-4 bg-white shadow-sm font-[Poppins] rounded-lg">
+    <aside className="w-full sm:w-72 md:w-80 lg:w-[336px] min-h-screen flex flex-col gap-6 p-4 bg-white shadow-sm font-[Poppins] rounded-lg ">
       <Section title="Main">{menu.main.map((item) => renderItem(item))}</Section>
       <Section title="Resource & Order Management">
         {menu.resourceOrderManagement.map((item) => renderItem(item))}

@@ -174,7 +174,7 @@ const OrderManagement: FC = () => {
                 onClick={() => handlePageChange(page)}
                 className={`w-10 h-10 rounded-lg font-medium transition-all ${
                   currentPage === page
-                    ? 'bg-yellow-400 text-gray-900 border-2 border-yellow-500'
+                    ? ' text-[#C9A040] border-2 border-[#C9A040]'
                     : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
                 }`}
               >

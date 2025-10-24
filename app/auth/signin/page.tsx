@@ -6,7 +6,7 @@ import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { NextPage } from 'next';
 import { useRouter } from 'next/navigation'
 import Image from 'next/image';
- import logo from "@/public/logo.png"
+ import logo from "@/public/logo.svg"
 const SignInPage: NextPage = () => {
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
@@ -19,7 +19,7 @@ const SignInPage: NextPage = () => {
     
     try {
      
-    router.push("/")
+    router.push("/pages/dashboard")
       
     } catch (error) {
       console.error('Sign in error:', error);
@@ -48,9 +48,9 @@ const SignInPage: NextPage = () => {
           {/* Logo */}
           <div className="w-full max-w-[500px] h-24 flex items-center justify-center">
             <div className="text-center">
-              <h1 className="text-4xl font-black text-black tracking-wider leading-tight">
+              <h1 className="text-4xl font-black text-black tracking-wider leading-tight ">
                 {/* <Image src={Logo} alt='logo'/> */}
-                <Image src={logo} alt="logo" width={100} height={100} className='rounded-full'/>
+                <Image src={logo} alt="logo" width={150} height={150} className='rounded-full '/>
 
               </h1>
              

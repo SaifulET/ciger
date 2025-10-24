@@ -8,7 +8,7 @@ import Logo from '@/public/Tele-Portes Logo.svg';
 import Pattern from '@/public/pattern.svg';
 import { useRouter } from 'next/navigation'
 import Image from 'next/image';
-import logo from "@/public/logo.png"
+import logo from "@/public/logo.svg"
 
 const SignUpPage: NextPage = () => {
   const [firstName, setFirstName] = useState<string>('');
@@ -50,7 +50,7 @@ const SignUpPage: NextPage = () => {
       {/* Logo */}
       <div className="w-[500px] h-24 flex items-center justify-center ">
         {/* <Image src={Logo} alt='logo'/> */}
-        <Image src={logo} alt="logo" width={100} height={100} className='rounded-full'/>
+        <Image src={logo} alt="logo" width={150} height={150} className='rounded-full'/>
       </div>
 
       {/* Welcome text */}

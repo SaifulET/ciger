@@ -1,12 +1,35 @@
 'use client'
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, X } from 'lucide-react';
 import { ArrowLeft02Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import 'quill/dist/quill.snow.css';
+import { useQuill } from 'react-quilljs';
+
+// Define types
+interface ProductImage {
+  name: string;
+  data: string;
+}
+
+interface FormData {
+  category: string;
+  subCategory: string;
+  brand: string;
+  productName: string;
+  productQuantity: string;
+  productStock: string;
+  productPrice: string;
+  productSalePrice: string;
+  productState: string | null;
+  productDescription: string;
+  selectedImage: ProductImage | null;
+}
 
 const InventoryAddItem = () => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     category: '',
     subCategory: '',
     brand: '',
@@ -20,13 +43,46 @@ const InventoryAddItem = () => {
     selectedImage: null,
   });
 
-  const [openDropdown, setOpenDropdown] = useState(null);
-  const fileInputRef = useRef(null);
-  const editorRef = useRef(null);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const router = useRouter();
+  
+  // Quill editor configuration
+  const { quill, quillRef } = useQuill({
+    modules: {
+      toolbar: {
+        container: [
+          [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+          [{ 'size': ['small', false, 'large', 'huge'] }],
+          ['bold', 'italic', 'underline', 'strike'],
+          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+          [{ 'align': [] }],
+          [{ 'color': [] }, { 'background': [] }],
+          ['link', 'image'],
+          ['clean']
+        ]
+      }
+    },
+    formats: [
+      'header',
+      'size',
+      'bold', 
+      'italic', 
+      'underline', 
+      'strike',
+      'list',
+      'align',
+      'color', 
+      'background',
+      'link', 
+      'image'
+    ],
+    theme: 'snow'
+  });
 
   // Mock data for dropdowns
   const categories = ['Electronics', 'Clothing', 'Food', 'Books'];
-  const subCategories = {
+  const subCategories: Record<string, string[]> = {
     Electronics: ['Phones', 'Laptops', 'Tablets'],
     Clothing: ['Men', 'Women', 'Kids'],
     Food: ['Snacks', 'Beverages', 'Dairy'],
@@ -34,17 +90,67 @@ const InventoryAddItem = () => {
   };
   const brands = ['Samsung', 'Apple', 'Sony', 'LG', 'Generic'];
 
-  const handleInputChange = (e) => {
+  // Initialize Quill editor
+  useEffect(() => {
+    if (quill) {
+      // Force LTR direction at multiple levels
+      const editor = quill.root;
+      
+      // Set CSS direction and alignment
+      editor.style.direction = 'ltr';
+      editor.style.textAlign = 'left';
+      
+      // Set Quill format for direction
+      quill.format('direction', 'ltr');
+      
+      // Apply LTR to the entire editor container
+      const container = document.querySelector('.ql-container');
+      if (container) {
+        (container as HTMLElement).style.direction = 'ltr';
+        (container as HTMLElement).style.textAlign = 'left';
+      }
+
+      // Apply LTR to the editor content
+      const editorContent = document.querySelector('.ql-editor');
+      if (editorContent) {
+        (editorContent as HTMLElement).style.direction = 'ltr';
+        (editorContent as HTMLElement).style.textAlign = 'left';
+      }
+
+      // Set initial content
+      quill.clipboard.dangerouslyPasteHTML(formData.productDescription || 'This is awesome!');
+      
+      // Ensure all content has LTR direction
+      quill.formatText(0, quill.getLength(), 'direction', 'ltr');
+      
+      quill.on('text-change', () => {
+        const html = quill.root.innerHTML;
+        setFormData(prev => ({ ...prev, productDescription: html }));
+        
+        // Continuously enforce LTR direction
+        quill.format('direction', 'ltr');
+      });
+
+      // Force LTR on selection change (when user clicks or types)
+      quill.on('selection-change', () => {
+        setTimeout(() => {
+          quill.format('direction', 'ltr');
+        }, 0);
+      });
+    }
+  }, [quill]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleDropdownSelect = (field, value) => {
+  const handleDropdownSelect = (field: keyof FormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setOpenDropdown(null);
   };
 
-  const handleProductState = (state) => {
+  const handleProductState = (state: string) => {
     setFormData(prev => ({
       ...prev,
       productState: prev.productState === state ? null : state,
@@ -55,7 +161,7 @@ const InventoryAddItem = () => {
     fileInputRef.current?.click();
   };
 
-  const handleImageChange = (e) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -64,7 +170,7 @@ const InventoryAddItem = () => {
           ...prev,
           selectedImage: {
             name: file.name,
-            data: reader.result,
+            data: reader.result as string,
           },
         }));
       };
@@ -79,6 +185,7 @@ const InventoryAddItem = () => {
     };
     console.log('Product saved:', productObject);
     alert('Product saved! Check console for details.');
+    router.push("/pages/inventory");
   };
 
   const handleCancel = () => {
@@ -95,6 +202,15 @@ const InventoryAddItem = () => {
       productDescription: '',
       selectedImage: null,
     });
+    
+    // Reset Quill editor content
+    if (quill) {
+      quill.clipboard.dangerouslyPasteHTML('This is awesome!');
+      quill.format('direction', 'ltr');
+      quill.formatText(0, quill.getLength(), 'direction', 'ltr');
+    }
+    
+    router.push("/pages/inventory");
   };
 
   const getSubCategoryOptions = () => {
@@ -103,59 +219,23 @@ const InventoryAddItem = () => {
     return Array.isArray(options) ? options : [];
   };
 
-  const handleCategorySelect = (cat) => {
+  const handleCategorySelect = (cat: string) => {
     handleDropdownSelect('category', cat);
     setFormData(prev => ({ ...prev, subCategory: '' }));
   };
 
-  const execCommand = (command, value = null) => {
-    document.execCommand(command, false, value);
-    editorRef.current?.focus();
-  };
-
-  const handleEditorChange = () => {
-    if (editorRef.current) {
-      const html = editorRef.current.innerHTML;
-      setFormData(prev => ({ ...prev, productDescription: html }));
-    }
-  };
-
-  const insertListItem = (type) => {
-    editorRef.current?.focus();
-    
-    if (type === 'bullet') {
-      // Remove ordered list if exists
-      if (document.queryCommandState('insertOrderedList')) {
-        document.execCommand('insertOrderedList');
-      }
-      // Toggle bullet list
-      document.execCommand('insertUnorderedList');
-    } else {
-      // Remove bullet list if exists
-      if (document.queryCommandState('insertUnorderedList')) {
-        document.execCommand('insertUnorderedList');
-      }
-      // Toggle ordered list
-      document.execCommand('insertOrderedList');
-    }
-    
-    handleEditorChange();
-  };
-
-  const isCommandActive = (command) => {
-    return document.queryCommandState(command);
-  };
-
   return (
-    <div className="min-h-screen  ml-10">
+    <div className="min-h-screen ml-10">
       <div className="">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8 py-6 rounded-lg bg-white">
+        <div className="flex items-center justify-between mb-8 py-6 px-6 rounded-lg bg-white">
           <div className="flex items-center gap-3 ">
-           <Link href="/pages/inventory" className='flex pl-5'> <button className=" hover:text-gray-900">
-             <HugeiconsIcon icon={ArrowLeft02Icon} />
-            </button>
-            <span className="">Inventory Management</span></Link>
+            <Link href="/pages/inventory" className='flex pl-5'>
+              <button className="hover:text-gray-900">
+                <HugeiconsIcon icon={ArrowLeft02Icon} />
+              </button>
+              <span className="">Inventory Management</span>
+            </Link>
             <span className=""><HugeiconsIcon icon={ArrowRight01Icon} /></span>
             <span className="">Add Item</span>
           </div>
@@ -375,158 +455,18 @@ const InventoryAddItem = () => {
             </div>
           </div>
 
-          {/* Product Description */}
+          {/* Product Description (Quill Editor) */}
           <div className="mb-6">
             <label className="block text-sm font-semibold text-gray-900 mb-2">
               Product Description <span className="text-red-500">*</span>
             </label>
-            <div className="border border-gray-300 rounded-lg overflow-hidden bg-white">
-              {/* Toolbar */}
-              <div className="bg-gray-100 border-b border-gray-300 p-3 flex gap-2 flex-wrap items-center">
-                {/* Text Formatting */}
-                <div className="flex gap-1 items-center">
-                  <button
-                    onClick={() => execCommand('bold')}
-                    className={`p-2 rounded transition text-sm font-bold ${
-                      isCommandActive('bold') ? 'bg-[#C9A040] text-white' : 'hover:bg-gray-200'
-                    }`}
-                    title="Bold (Ctrl+B)"
-                  >
-                    B
-                  </button>
-                  <button
-                    onClick={() => execCommand('italic')}
-                    className={`p-2 rounded transition text-sm italic ${
-                      isCommandActive('italic') ? 'bg-[#C9A040] text-white' : 'hover:bg-gray-200'
-                    }`}
-                    title="Italic (Ctrl+I)"
-                  >
-                    I
-                  </button>
-                  <button
-                    onClick={() => execCommand('underline')}
-                    className={`p-2 rounded transition text-sm underline ${
-                      isCommandActive('underline') ? 'bg-[#C9A040] text-white' : 'hover:bg-gray-200'
-                    }`}
-                    title="Underline (Ctrl+U)"
-                  >
-                    U
-                  </button>
-                  <button
-                    onClick={() => execCommand('strikethrough')}
-                    className={`p-2 rounded transition text-sm line-through ${
-                      isCommandActive('strikethrough') ? 'bg-[#C9A040] text-white' : 'hover:bg-gray-200'
-                    }`}
-                    title="Strikethrough"
-                  >
-                    S
-                  </button>
-                </div>
-
-                <div className="w-px bg-gray-300 h-6"></div>
-
-                {/* Lists */}
-                <div className="flex gap-1 items-center">
-                  <button
-                    onClick={() => insertListItem('bullet')}
-                    className={`p-2 rounded transition text-sm ${
-                      isCommandActive('insertUnorderedList') ? 'bg-[#C9A040] text-white' : 'hover:bg-gray-200'
-                    }`}
-                    title="Bullet List"
-                  >
-                    • List
-                  </button>
-                  <button
-                    onClick={() => insertListItem('ordered')}
-                    className={`p-2 rounded transition text-sm ${
-                      isCommandActive('insertOrderedList') ? 'bg-[#C9A040] text-white' : 'hover:bg-gray-200'
-                    }`}
-                    title="Numbered List"
-                  >
-                    1. List
-                  </button>
-                </div>
-
-                <div className="w-px bg-gray-300 h-6"></div>
-
-                {/* Alignment */}
-                <div className="flex gap-1 items-center">
-                  <button
-                    onClick={() => execCommand('justifyLeft')}
-                    className={`p-2 rounded transition text-sm ${
-                      isCommandActive('justifyLeft') ? 'bg-[#C9A040] text-white' : 'hover:bg-gray-200'
-                    }`}
-                    title="Align Left"
-                  >
-                    ⬅
-                  </button>
-                  <button
-                    onClick={() => execCommand('justifyCenter')}
-                    className={`p-2 rounded transition text-sm ${
-                      isCommandActive('justifyCenter') ? 'bg-[#C9A040] text-white' : 'hover:bg-gray-200'
-                    }`}
-                    title="Align Center"
-                  >
-                    ⬆⬇
-                  </button>
-                  <button
-                    onClick={() => execCommand('justifyRight')}
-                    className={`p-2 rounded transition text-sm ${
-                      isCommandActive('justifyRight') ? 'bg-[#C9A040] text-white' : 'hover:bg-gray-200'
-                    }`}
-                    title="Align Right"
-                  >
-                    ➡
-                  </button>
-                </div>
-
-                <div className="w-px bg-gray-300 h-6"></div>
-
-                {/* Indentation */}
-                <div className="flex gap-1 items-center">
-                  <button
-                    onClick={() => execCommand('outdent')}
-                    className="p-2 rounded transition text-sm hover:bg-gray-200"
-                    title="Decrease Indent"
-                  >
-                    ↤
-                  </button>
-                  <button
-                    onClick={() => execCommand('indent')}
-                    className="p-2 rounded transition text-sm hover:bg-gray-200"
-                    title="Increase Indent"
-                  >
-                    ↦
-                  </button>
-                </div>
-
-                <div className="w-px bg-gray-300 h-6"></div>
-
-                {/* Clear */}
-                <button
-                  onClick={() => execCommand('removeFormat')}
-                  className="p-2 rounded transition text-sm hover:bg-gray-200"
-                  title="Clear Formatting"
-                >
-                  Clear
-                </button>
-              </div>
-              {/* Editor */}
-              <div
-                ref={editorRef}
-                contentEditable
-                suppressContentEditableWarning
-                onInput={handleEditorChange}
-                className="w-full h-32 p-4 text-gray-900 focus:outline-none resize-none focus:ring-2 focus:ring-inset focus:ring-[#C9A040] overflow-auto"
-                style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
-              >
-                This is awesome!
-              </div>
+            <div className="h-64" style={{ direction: 'ltr' }}>
+              <div ref={quillRef} />
             </div>
           </div>
 
           {/* Choose Image */}
-          <div className="mb-6">
+          <div className="mb-6  mt-16">
             <label className="block text-sm font-semibold text-gray-900 mb-2">Choose Image</label>
             <div className="flex items-center gap-3">
               <button

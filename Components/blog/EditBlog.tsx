@@ -37,7 +37,7 @@ export default function EditBlog() {
     [{ 'list': 'ordered' }, { 'list': 'bullet' }],
     ['link', 'image'],
     [{ 'color': [] }, { 'background': [] }],
-    ['clean']
+    ['clean'] // 'clean' is a toolbar button, not a format
   ];
 
   // Initialize Quill editor
@@ -51,8 +51,8 @@ export default function EditBlog() {
       'bold', 'italic', 'underline', 'strike',
       'align', 'list',
       'link', 'image',
-      'color', 'background',
-      'clean'
+      'color', 'background'
+      // Removed 'clean' from formats as it's not a valid format
     ]
   });
 
@@ -71,9 +71,7 @@ export default function EditBlog() {
 
         const SizeStyle = Quill.import('attributors/style/size');
         SizeStyle.whitelist = [
-          'small', false, 'large', 'huge',
-          '10px', '12px', '14px', '16px', '18px', '20px', 
-          '24px', '28px', '32px', '36px', '48px', '64px'
+          'small', false, 'large', 'huge'
         ];
         Quill.register(SizeStyle, true);
 
@@ -175,20 +173,6 @@ export default function EditBlog() {
         .ql-size-small { font-size: 12px !important; }
         .ql-size-large { font-size: 18px !important; }
         .ql-size-huge { font-size: 24px !important; }
-
-        /* Additional pixel sizes */
-        .ql-size-10px { font-size: 10px !important; }
-        .ql-size-12px { font-size: 12px !important; }
-        .ql-size-14px { font-size: 14px !important; }
-        .ql-size-16px { font-size: 16px !important; }
-        .ql-size-18px { font-size: 18px !important; }
-        .ql-size-20px { font-size: 20px !important; }
-        .ql-size-24px { font-size: 24px !important; }
-        .ql-size-28px { font-size: 28px !important; }
-        .ql-size-32px { font-size: 32px !important; }
-        .ql-size-36px { font-size: 36px !important; }
-        .ql-size-48px { font-size: 48px !important; }
-        .ql-size-64px { font-size: 64px !important; }
 
         /* Toolbar Picker Labels */
         .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="sans-serif"]::before,

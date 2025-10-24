@@ -5,10 +5,32 @@ import { ArrowLeft02Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import 'quill/dist/quill.snow.css';
+import { useQuill } from 'react-quilljs';
+
+// Define types
+interface ProductImage {
+  name: string;
+  data: string;
+}
+
+interface FormData {
+  category: string;
+  subCategory: string;
+  brand: string;
+  productName: string;
+  productQuantity: number;
+  productStock: number;
+  productPrice: number;
+  productSalePrice: number;
+  productState: string | null;
+  productDescription: string;
+  selectedImage: ProductImage | null;
+}
 
 const InventoryEditItem = () => {
   // Example existing product (you can replace it with API data)
-  const existingProduct = {
+  const existingProduct: FormData = {
     category: 'Electronics',
     subCategory: 'Phones',
     brand: 'Samsung',
@@ -22,10 +44,42 @@ const InventoryEditItem = () => {
     selectedImage: { name: 'galaxy-s24.png', data: '' },
   };
 
-  const [formData, setFormData] = useState(existingProduct);
+  const [formData, setFormData] = useState<FormData>(existingProduct);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const editorRef = useRef<HTMLDivElement | null>(null);
+  
+  // Quill editor configuration with font size and proper direction
+  const { quill, quillRef } = useQuill({
+    modules: {
+      toolbar: {
+        container: [
+          [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+          [{ 'size': ['small', false, 'large', 'huge'] }],
+          ['bold', 'italic', 'underline', 'strike'],
+          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+          [{ 'align': [] }],
+          [{ 'color': [] }, { 'background': [] }],
+          ['link', 'image'],
+          ['clean']
+        ]
+      }
+    },
+    formats: [
+      'header',
+      'size',
+      'bold', 
+      'italic', 
+      'underline', 
+      'strike',
+      'list',
+      'align',
+      'color', 
+      'background',
+      'link', 
+      'image'
+    ],
+    theme: 'snow'
+  });
 
   // Mock data
   const categories = ['Electronics', 'Clothing', 'Food', 'Books'];
@@ -38,18 +92,43 @@ const InventoryEditItem = () => {
   const brands = ['Samsung', 'Apple', 'Sony', 'LG', 'Generic'];
   const router = useRouter();
 
-  useEffect(() => {
-    if (editorRef.current && formData.productDescription) {
-      editorRef.current.innerHTML = formData.productDescription;
-    }
-  }, [formData.productDescription]);
+  // Initialize Quill editor with existing content
+useEffect(() => {
+  if (!quill) return;
+
+  quill.root.style.direction = "ltr";
+  quill.root.style.textAlign = "left";
+  quill.format("direction", "ltr");
+  quill.format("align", "left");
+
+  quill.clipboard.dangerouslyPasteHTML(formData.productDescription);
+
+  const handler = () => {
+    setFormData(prev => ({
+      ...prev,
+      productDescription: quill.root.innerHTML
+    }));
+  };
+
+  quill.on("text-change", handler);
+
+  return () => {
+    quill.off("text-change", handler);
+  };
+}, [quill]); // ✅ only initialize ONCE
+
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ 
+      ...prev, 
+      [name]: name.includes('Quantity') || name.includes('Stock') || name.includes('Price') || name.includes('SalePrice') 
+        ? Number(value) 
+        : value 
+    }));
   };
 
-  const handleDropdownSelect = (field: string, value: string) => {
+  const handleDropdownSelect = (field: keyof FormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setOpenDropdown(null);
   };
@@ -80,19 +159,21 @@ const InventoryEditItem = () => {
   const handleSave = () => {
     const updatedProduct = {
       ...formData,
-      productDescription: editorRef.current?.innerHTML || '',
       updatedAt: new Date().toISOString(),
     };
     console.log('Product updated:', updatedProduct);
-    router.push("/pages/inventory")
-    // alert('Product updated! Check console for details.');
+    router.push("/pages/inventory");
   };
 
   const handleCancel = () => {
     setFormData(existingProduct);
-    if (editorRef.current) editorRef.current.innerHTML = existingProduct.productDescription;
-    router.push("/pages/inventory")
-
+    if (quill) {
+      quill.clipboard.dangerouslyPasteHTML(existingProduct.productDescription);
+      // Reset formatting to LTR
+      quill.format('direction', 'ltr');
+      quill.format('align', 'left');
+    }
+    router.push("/pages/inventory");
   };
 
   const getSubCategoryOptions = () => {
@@ -105,38 +186,6 @@ const InventoryEditItem = () => {
     handleDropdownSelect('category', cat);
     setFormData(prev => ({ ...prev, subCategory: '' }));
   };
-
-  // === Custom Editor Functions ===
-  const execCommand = (command: string, value: string | null = null) => {
-    document.execCommand(command, false, value);
-    editorRef.current?.focus();
-  };
-
-  const handleEditorChange = () => {
-    if (editorRef.current) {
-      const html = editorRef.current.innerHTML;
-      setFormData(prev => ({ ...prev, productDescription: html }));
-    }
-
-  };
-
-  const insertListItem = (type: 'bullet' | 'ordered') => {
-    editorRef.current?.focus();
-    if (type === 'bullet') {
-      if (document.queryCommandState('insertOrderedList')) {
-        document.execCommand('insertOrderedList');
-      }
-      document.execCommand('insertUnorderedList');
-    } else {
-      if (document.queryCommandState('insertUnorderedList')) {
-        document.execCommand('insertUnorderedList');
-      }
-      document.execCommand('insertOrderedList');
-    }
-    handleEditorChange();
-  };
-
-  const isCommandActive = (command: string) => document.queryCommandState(command);
 
   return (
     <div className="min-h-screen ml-10">
@@ -346,83 +395,18 @@ const InventoryEditItem = () => {
             </div>
           </div>
 
-          {/* Product Description (Custom Editor) */}
+          {/* Product Description (Quill Editor) */}
           <div className="mb-6">
             <label className="block text-sm font-semibold text-gray-900 mb-2">
               Product Description <span className="text-red-500">*</span>
             </label>
-
-            {/* Toolbar */}
-            <div className="flex flex-wrap items-center gap-2 mb-3 bg-gray-50 p-2 rounded-lg border border-gray-300">
-              <button
-                type="button"
-                onClick={() => execCommand('bold')}
-                className={`px-2 py-1 rounded ${isCommandActive('bold') ? 'bg-[#C9A040] text-white' : 'hover:bg-gray-200'}`}
-              >
-                <b>B</b>
-              </button>
-              <button
-                type="button"
-                onClick={() => execCommand('italic')}
-                className={`px-2 py-1 rounded italic ${isCommandActive('italic') ? 'bg-[#C9A040] text-white' : 'hover:bg-gray-200'}`}
-              >
-                I
-              </button>
-              <button
-                type="button"
-                onClick={() => execCommand('underline')}
-                className={`px-2 py-1 rounded underline ${isCommandActive('underline') ? 'bg-[#C9A040] text-white' : 'hover:bg-gray-200'}`}
-              >
-                U
-              </button>
-              <button
-                type="button"
-                onClick={() => insertListItem('bullet')}
-                className="px-2 py-1 rounded hover:bg-gray-200"
-              >
-                • List
-              </button>
-              <button
-                type="button"
-                onClick={() => insertListItem('ordered')}
-                className="px-2 py-1 rounded hover:bg-gray-200"
-              >
-                1. List
-              </button>
-              <button
-                type="button"
-                onClick={() => execCommand('justifyLeft')}
-                className="px-2 py-1 rounded hover:bg-gray-200"
-              >
-                ⬅
-              </button>
-              <button
-                type="button"
-                onClick={() => execCommand('justifyCenter')}
-                className="px-2 py-1 rounded hover:bg-gray-200"
-              >
-                ⬍
-              </button>
-              <button
-                type="button"
-                onClick={() => execCommand('justifyRight')}
-                className="px-2 py-1 rounded hover:bg-gray-200"
-              >
-                ➡
-              </button>
+            <div className="h-64 [direction:ltr]">
+              <div ref={quillRef} className="[direction:ltr] [text-align:left]" />
             </div>
-
-            {/* Editable Area */}
-            <div
-              ref={editorRef}
-              contentEditable
-              onInput={handleEditorChange}
-              className="min-h-[150px] border border-gray-300 rounded-lg p-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A040] prose max-w-none"
-            ></div>
           </div>
 
           {/* Product Image */}
-          <div className="mb-6">
+          <div className="mb-6 mt-16">
             <label className="block text-sm font-semibold text-gray-900 mb-2">
               Product Image
             </label>
