@@ -1,9 +1,12 @@
+
+'use client'
 import InventoryEditItem from '@/Components/inventory/EditInventory'
 import React from 'react'
-
+import { Suspense } from "react";
 function page() {
   return (
-    <div><InventoryEditItem/></div>
+    
+    <Suspense fallback={<div>Loading...</div>}><InventoryEditItem/></Suspense>
   )
 }
 
