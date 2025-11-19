@@ -2,62 +2,47 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
-
-interface Brand {
-  id: number;
-  name: string;
-  image: string;
-  featured?: boolean;
-}
-
-const brandData: Brand[] = [
-  { id: 1, name: "Brand Name", image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200&h=200&fit=crop", featured: false },
-  { id: 2, name: "Tech Brand", image: "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=200&h=200&fit=crop", featured: true },
-  { id: 3, name: "Fashion Co", image: "https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=200&h=200&fit=crop", featured: false },
-  { id: 4, name: "Luxury Items", image: "https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=200&h=200&fit=crop", featured: false },
-  { id: 5, name: "Sport Gear", image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200&h=200&fit=crop", featured: true },
-  { id: 6, name: "Home Decor", image: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=200&h=200&fit=crop", featured: false },
-  { id: 7, name: "Beauty Pro", image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=200&h=200&fit=crop", featured: false },
-  { id: 8, name: "Food & Bev", image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200&h=200&fit=crop", featured: false },
-  { id: 9, name: "Electronics", image: "", featured: false },
-  { id: 10, name: "Automotive", image: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=200&h=200&fit=crop", featured: true },
-];
+import { useBrandStore } from '@/app/store/brandStore';
+import { Brand } from '../inventory/inventory';
 
 const BrandEdit: React.FC = () => {
   const params = useParams();
   const router = useRouter();
+  const { currentBrand, loading, error, fetchBrandById, updateBrand } = useBrandStore();
 
-  const [brandId, setBrandId] = useState<number | null>(null);
   const [brandName, setBrandName] = useState('');
-  const [brandImage, setBrandImage] = useState('');
-  const [featured, setFeatured] = useState(false);
-  const [originalBrand, setOriginalBrand] = useState<Brand | null>(null);
-  const [hasEdited, setHasEdited] = useState(false);
+  const [brandImage, setBrandImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
+  const [feature, setFeature] = useState(false);
+const [originalBrand, setOriginalBrand] = useState<Brand | null>(null);  const [hasEdited, setHasEdited] = useState(false);
 
   // 🔹 Load brand by URL param
   useEffect(() => {
     if (!params?.id) return;
-    const id = Number(params.id);
-    setBrandId(id);
+    const id = params.id as string;
+    fetchBrandById(id);
+  }, [params, fetchBrandById]);
 
-    const foundBrand = brandData.find(b => b.id === id);
-    if (foundBrand) {
-      setOriginalBrand(foundBrand);
-      setBrandName(foundBrand.name);
-      setBrandImage(foundBrand.image);
-      setFeatured(foundBrand.featured || false);
+  // 🔹 Set form data when currentBrand is loaded
+  useEffect(() => {
+    if (currentBrand) {
+      setOriginalBrand(currentBrand);
+      setBrandName(currentBrand.name);
+      setImagePreview(currentBrand.image || '');
+      setFeature(currentBrand.feature);
     }
-  }, [params]);
+  }, [currentBrand]);
 
   // 🔹 Detect edits
   useEffect(() => {
     if (!originalBrand) return;
     const changed =
       brandName !== originalBrand.name ||
-      brandImage !== originalBrand.image ||
-      featured !== originalBrand.featured;
+      brandImage !== null || // If new file is selected
+      (brandImage === null && imagePreview !== (originalBrand.image || '')) || // If image was removed
+      feature !== originalBrand.feature;
     setHasEdited(changed);
-  }, [brandName, brandImage, featured, originalBrand]);
+  }, [brandName, brandImage, imagePreview, feature, originalBrand]);
 
   const handleSelectImage = () => {
     const input = document.createElement('input');
@@ -68,32 +53,67 @@ const BrandEdit: React.FC = () => {
       const target = e.target as HTMLInputElement;
       const file = target.files?.[0];
       if (file) {
-        const imageUrl = URL.createObjectURL(file);
-        setBrandImage(imageUrl);
+        setBrandImage(file);
+        // Create preview URL
+        const previewUrl = URL.createObjectURL(file);
+        setImagePreview(previewUrl);
       }
     };
     input.click();
   };
 
-  const handleSave = () => {
-    if (!hasEdited || !brandId) return;
+  const handleRemoveImage = () => {
+    setBrandImage(null);
+    setImagePreview('');
+  };
+
+  const handleSave = async () => {
+    if (!hasEdited || !currentBrand) return;
 
     const updatedBrand = {
-      id: brandId,
       name: brandName,
-      image: brandImage,
-      featured: featured,
+      feature: feature,
+      image: brandImage || undefined, // Pass undefined if no new file
     };
 
-    console.log('✅ Updated Brand:', updatedBrand);
-    router.push('/pages/brand');
+    await updateBrand(currentBrand._id, updatedBrand);
+    if (!error) {
+      // Clean up preview URL
+      if (imagePreview && brandImage) {
+        URL.revokeObjectURL(imagePreview);
+      }
+      router.push('/pages/brand');
+    }
   };
 
   const handleCancel = () => {
+    // Clean up preview URL
+    if (imagePreview && brandImage) {
+      URL.revokeObjectURL(imagePreview);
+    }
     router.push('/pages/brand');
   };
 
-  if (!originalBrand) {
+  // Clean up preview URLs on unmount
+  useEffect(() => {
+    return () => {
+      if (imagePreview && brandImage) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview, brandImage]);
+
+  if (loading && !currentBrand) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-8">
+        <div className="max-w-4xl mx-auto">
+          <p className="text-center text-gray-600">Loading brand...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentBrand && !loading) {
     return (
       <div className="min-h-screen bg-gray-50 p-8">
         <div className="max-w-4xl mx-auto">
@@ -105,54 +125,57 @@ const BrandEdit: React.FC = () => {
 
   return (
     <div className="min-h-screen ml-8 ">
-      
-
       <div className="px-8 py-6">
         <div className="">
           <div className="bg-white  px-8 py-4 rounded-lg mb-8">
-
-
-{/* Breadcrumb */}
-      <div >
-        <div className=" flex items-center gap-2 text-sm mb-3">
-          <button
-            onClick={() => router.push('/pages/brand')}
-            className="text-gray-600 hover:text-gray-900"
-          >
-            ← Brand
-          </button>
-          <ChevronRight size={16} className="text-gray-400" />
-          <span className="text-gray-900 font-medium">Edit Brand</span>
-        </div>
-      </div>
-             {/* Header */}
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-900">Brand Management</h1>
-            <div className="flex gap-3">
-              <button
-                onClick={handleCancel}
-                className="bg-white hover:bg-gray-50 text-gray-700 px-6 py-2.5 rounded-lg border border-gray-300 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={!hasEdited}
-                className={`px-6 py-2.5 rounded-lg transition-colors ${
-                  hasEdited
-                    ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
-                    : 'bg-gray-300 text-gray-600 cursor-not-allowed'
-                }`}
-              >
-                Save
-              </button>
+            {/* Breadcrumb */}
+            <div >
+              <div className=" flex items-center gap-2 text-sm mb-3">
+                <button
+                  onClick={() => router.push('/pages/brand')}
+                  className="text-gray-600 hover:text-gray-900"
+                >
+                  ← Brand
+                </button>
+                <ChevronRight size={16} className="text-gray-400" />
+                <span className="text-gray-900 font-medium">Edit Brand</span>
+              </div>
+            </div>
+            
+            {/* Header */}
+            <div className="flex justify-between items-center mb-8">
+              <h1 className="text-4xl font-bold text-gray-900">Brand Management</h1>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleCancel}
+                  className="bg-white hover:bg-gray-50 text-gray-700 px-6 py-2.5 rounded-lg border border-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={!hasEdited || loading}
+                  className={`px-6 py-2.5 rounded-lg transition-colors ${
+                    hasEdited && !loading
+                      ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
+                      : 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                  }`}
+                >
+                  {loading ? 'Saving...' : 'Save'}
+                </button>
+              </div>
             </div>
           </div>
-          </div>
          
-
           {/* Form Container */}
           <div className="bg-white rounded-lg shadow-sm p-8">
+            {/* Error Display */}
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-700">{error}</p>
+              </div>
+            )}
+
             {/* Brand Name */}
             <div className="mb-8">
               <label className="block text-sm font-semibold text-gray-900 mb-3">
@@ -175,22 +198,21 @@ const BrandEdit: React.FC = () => {
                 </span>
                 <div
                   className="relative inline-block w-11 h-6 transition-all duration-300"
-                  
                 >
                   <input
                     type="checkbox"
-                    checked={featured}
-                    onChange={() => setFeatured(!featured)}
+                    checked={feature}
+                    onChange={() => setFeature(!feature)}
                     className="peer sr-only"
                   />
                   <div
                     className={`w-11 h-6 rounded-full transition-colors duration-300 ${
-                      featured ? 'bg-blue-600' : 'bg-gray-300'
+                      feature ? 'bg-blue-600' : 'bg-gray-300'
                     }`}
                   ></div>
                   <div
                     className={`absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-300 ${
-                      featured ? 'translate-x-5' : ''
+                      feature ? 'translate-x-5' : ''
                     }`}
                   ></div>
                 </div>
@@ -203,18 +225,28 @@ const BrandEdit: React.FC = () => {
                 Choose Image
               </label>
 
-              <button
-                onClick={handleSelectImage}
-                className="bg-yellow-600 hover:bg-yellow-700 text-white px-6 py-2.5 rounded-lg mb-4 transition-colors"
-              >
-                Select Image
-              </button>
+              <div className="flex gap-3 mb-4">
+                <button
+                  onClick={handleSelectImage}
+                  className="bg-yellow-600 hover:bg-yellow-700 text-white px-6 py-2.5 rounded-lg transition-colors"
+                >
+                  {imagePreview ? 'Change Image' : 'Select Image'}
+                </button>
+                {imagePreview && (
+                  <button
+                    onClick={handleRemoveImage}
+                    className="bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-lg transition-colors"
+                  >
+                    Remove Image
+                  </button>
+                )}
+              </div>
 
-              {brandImage ? (
+              {imagePreview ? (
                 <div className="w-48 h-48 border-2 border-gray-200 rounded-lg overflow-hidden">
                   <img
-                    src={brandImage}
-                    alt={brandName}
+                    src={imagePreview}
+                    alt="Preview"
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -225,6 +257,11 @@ const BrandEdit: React.FC = () => {
                     <p className="text-gray-400 text-sm">No image selected</p>
                   </div>
                 </div>
+              )}
+              {brandImage && (
+                <p className="text-sm text-gray-600 mt-2">
+                  New file: {brandImage.name}
+                </p>
               )}
             </div>
           </div>

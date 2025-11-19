@@ -28,9 +28,11 @@ export interface Brand {
   _id: string;
   name: string;
   image?: string;
+  feature?:boolean;
+
   createdAt: string;
   updatedAt: string;
-  __v: number;
+  __v?: number;
 }
 
 export interface ProductFormData {

@@ -4,131 +4,170 @@ import { ChevronDown, X } from 'lucide-react';
 import { ArrowLeft02Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import 'quill/dist/quill.snow.css';
 import { useQuill } from 'react-quilljs';
-
-// Define types
-interface ProductImage {
-  name: string;
-  data: string;
-}
-
-interface FormData {
-  category: string;
-  subCategory: string;
-  brand: string;
-  productName: string;
-  productQuantity: number;
-  productStock: number;
-  productPrice: number;
-  productSalePrice: number;
-  productState: string | null;
-  productDescription: string;
-  selectedImage: ProductImage | null;
-}
+import { useInventoryStore } from '@/app/store/inverntoryStore';
+import { categories, subCategories, ProductFormData, ProductImage } from './inventory';
 
 const InventoryEditItem = () => {
-  // Example existing product (you can replace it with API data)
-  const existingProduct: FormData = {
-    category: 'Electronics',
-    subCategory: 'Phones',
-    brand: 'Samsung',
-    productName: 'Galaxy S24 Ultra',
-    productQuantity: 20,
-    productStock: 10,
-    productPrice: 999,
-    productSalePrice: 15,
-    productState: 'bestSeller',
-    productDescription: '<p>Powerful smartphone with advanced AI features.</p>',
-    selectedImage: { name: 'galaxy-s24.png', data: '' },
-  };
+  const searchParams = useSearchParams();
+  const productId = searchParams.get('id');
+  
+  const [formData, setFormData] = useState<ProductFormData>({
+    category: '',
+    subCategory: '',
+    brand: '',
+    productName: '',
+    productQuantity: '',
+    productStock: '',
+    productPrice: '',
+    productSalePrice: '',
+    productState: null,
+    productDescription: '',
+    selectedImages: [],
+    existingImages: [],
+  });
 
-  const [formData, setFormData] = useState<FormData>(existingProduct);
+  const [isInitialDataLoaded, setIsInitialDataLoaded] = useState(false);
+  const [isQuillReady, setIsQuillReady] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   
-  // Quill editor configuration with font size and proper direction
+  const { 
+    currentProduct, 
+    getProductById, 
+    updateProduct, 
+    getAllBrands,
+    brands,
+    loading, 
+    error, 
+    clearError,
+    clearCurrentProduct 
+  } = useInventoryStore();
+
+  // Fixed Quill editor configuration
   const { quill, quillRef } = useQuill({
     modules: {
-      toolbar: {
-        container: [
-          [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-          [{ 'size': ['small', false, 'large', 'huge'] }],
-          ['bold', 'italic', 'underline', 'strike'],
-          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-          [{ 'align': [] }],
-          [{ 'color': [] }, { 'background': [] }],
-          ['link', 'image'],
-          ['clean']
-        ]
-      }
+      toolbar: [
+        ['bold', 'italic', 'underline'],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        ['link', 'image'],
+        ['clean']
+      ]
     },
-    formats: [
-      'header',
-      'size',
-      'bold', 
-      'italic', 
-      'underline', 
-      'strike',
-      'list',
-      'align',
-      'color', 
-      'background',
-      'link', 
-      'image'
-    ],
     theme: 'snow'
   });
 
-  // Mock data
-  const categories = ['Electronics', 'Clothing', 'Food', 'Books'];
-  const subCategories: Record<string, string[]> = {
-    Electronics: ['Phones', 'Laptops', 'Tablets'],
-    Clothing: ['Men', 'Women', 'Kids'],
-    Food: ['Snacks', 'Beverages', 'Dairy'],
-    Books: ['Fiction', 'Non-Fiction', 'Educational'],
-  };
-  const brands = ['Samsung', 'Apple', 'Sony', 'LG', 'Generic'];
   const router = useRouter();
 
-  // Initialize Quill editor with existing content
-useEffect(() => {
-  if (!quill) return;
+  // Clear current product when component unmounts or productId changes
+  useEffect(() => {
+    return () => {
+      clearCurrentProduct();
+    };
+  }, [clearCurrentProduct]);
 
-  quill.root.style.direction = "ltr";
-  quill.root.style.textAlign = "left";
-  quill.format("direction", "ltr");
-  quill.format("align", "left");
+  // Reset form state when productId changes
+  useEffect(() => {
+    setIsInitialDataLoaded(false);
+    setIsQuillReady(false);
+    setFormData({
+      category: '',
+      subCategory: '',
+      brand: '',
+      productName: '',
+      productQuantity: '',
+      productStock: '',
+      productPrice: '',
+      productSalePrice: '',
+      productState: null,
+      productDescription: '',
+      selectedImages: [],
+      existingImages: [],
+    });
+  }, [productId]);
 
-  quill.clipboard.dangerouslyPasteHTML(formData.productDescription);
+  // Fetch product data and brands when component mounts or productId changes
+  useEffect(() => {
+    const fetchData = async () => {
+      if (productId) {
+        // Clear current product before fetching new one
+        clearCurrentProduct();
+        await getProductById(productId);
+      }
+      await getAllBrands();
+    };
 
-  const handler = () => {
-    setFormData(prev => ({
-      ...prev,
-      productDescription: quill.root.innerHTML
-    }));
-  };
+    fetchData();
+  }, [productId, getProductById, getAllBrands, clearCurrentProduct]);
 
-  quill.on("text-change", handler);
+  // Update form data when currentProduct changes - with proper dependency tracking
+  useEffect(() => {
+    if (currentProduct && currentProduct._id === productId && !isInitialDataLoaded) {
+      console.log('Setting form data for product:', currentProduct.name);
+      
+      setFormData({
+        category: currentProduct.category || '',
+        subCategory: currentProduct.subCategory || '',
+        brand: currentProduct.brand || '',
+        productName: currentProduct.name || '',
+        productQuantity: currentProduct.available?.toString() || '',
+        productStock: currentProduct.available?.toString() || '',
+        productPrice: currentProduct.price?.toString() || '',
+        productSalePrice: currentProduct.discount?.toString() || '',
+        productState: currentProduct.isNew ? 'newArrivals' : currentProduct.isBest ? 'bestSeller' : null,
+        productDescription: currentProduct.description || '',
+        selectedImages: [],
+        existingImages: currentProduct.images || [],
+      });
+      setIsInitialDataLoaded(true);
+    }
+  }, [currentProduct, productId, isInitialDataLoaded]);
 
-  return () => {
-    quill.off("text-change", handler);
-  };
-}, [quill]); // ✅ only initialize ONCE
+  // Fixed Quill initialization
+  useEffect(() => {
+    if (quill && isInitialDataLoaded && !isQuillReady) {
+      console.log('Initializing Quill with content');
+      // Clear any existing content first
+      quill.setText('');
+      // Set the content from database
+      if (formData.productDescription) {
+        quill.clipboard.dangerouslyPasteHTML(formData.productDescription);
+      }
+      setIsQuillReady(true);
+    }
+  }, [quill, isInitialDataLoaded, isQuillReady, formData.productDescription]);
 
+  // Handle Quill content changes
+  useEffect(() => {
+    if (quill && isQuillReady) {
+      const handler = () => {
+        const html = quill.root.innerHTML;
+        // Only update if content actually changed (not the initial set)
+        if (html !== formData.productDescription && html !== '<p><br></p>') {
+          setFormData(prev => ({ 
+            ...prev, 
+            productDescription: html 
+          }));
+        }
+      };
 
+      quill.on('text-change', handler);
+
+      return () => {
+        quill.off('text-change', handler);
+      };
+    }
+  }, [quill, isQuillReady, formData.productDescription]);
+
+  // Handle input field changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ 
-      ...prev, 
-      [name]: name.includes('Quantity') || name.includes('Stock') || name.includes('Price') || name.includes('SalePrice') 
-        ? Number(value) 
-        : value 
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleDropdownSelect = (field: keyof FormData, value: string) => {
+  const handleDropdownSelect = (field: keyof ProductFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setOpenDropdown(null);
   };
@@ -142,37 +181,75 @@ useEffect(() => {
 
   const handleImageSelect = () => fileInputRef.current?.click();
 
+  // Handle multiple image selection
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({
-          ...prev,
-          selectedImage: { name: file.name, data: reader.result as string },
-        }));
-      };
-      reader.readAsDataURL(file);
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const newImages: ProductImage[] = [];
+      const filesArray = Array.from(files);
+      
+      filesArray.forEach((file, index) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          newImages.push({
+            name: file.name,
+            data: reader.result as string,
+          });
+          
+          // When all files are processed, update state
+          if (newImages.length === filesArray.length) {
+            setFormData(prev => ({
+              ...prev,
+              selectedImages: [...prev.selectedImages, ...newImages]
+            }));
+          }
+        };
+        reader.readAsDataURL(file);
+      });
     }
   };
 
-  const handleSave = () => {
-    const updatedProduct = {
-      ...formData,
-      updatedAt: new Date().toISOString(),
-    };
-    console.log('Product updated:', updatedProduct);
-    router.push("/pages/inventory");
+  // Remove selected image
+  const removeSelectedImage = (imageIndex: number) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedImages: prev.selectedImages.filter((_, index) => index !== imageIndex)
+    }));
+  };
+
+  const handleSave = async () => {
+    if (!productId) {
+      alert('Product ID not found');
+      return;
+    }
+
+    // Validate required fields
+    if (!formData.category || !formData.subCategory || !formData.brand || !formData.productName) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    // Validate numbers
+    if (!formData.productStock || !formData.productPrice) {
+      alert('Please fill in stock and price fields');
+      return;
+    }
+
+    try {
+      const result = await updateProduct(productId, formData);
+      if (result.success) {
+        alert('Product updated successfully!');
+        router.push("/pages/inventory");
+      } else {
+        alert(result.message || 'Failed to update product');
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update product';
+      alert(`Failed to update product: ${errorMessage}`);
+    }
   };
 
   const handleCancel = () => {
-    setFormData(existingProduct);
-    if (quill) {
-      quill.clipboard.dangerouslyPasteHTML(existingProduct.productDescription);
-      // Reset formatting to LTR
-      quill.format('direction', 'ltr');
-      quill.format('align', 'left');
-    }
     router.push("/pages/inventory");
   };
 
@@ -186,6 +263,54 @@ useEffect(() => {
     handleDropdownSelect('category', cat);
     setFormData(prev => ({ ...prev, subCategory: '' }));
   };
+
+  const removeExistingImage = (imageIndex: number) => {
+    setFormData(prev => ({
+      ...prev,
+      existingImages: prev.existingImages?.filter((_, index) => index !== imageIndex) || []
+    }));
+  };
+
+  // Add loading state while fetching data
+  if (!currentProduct && loading) {
+    return (
+      <div className="min-h-screen ml-10 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C9A040] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading product data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!productId) {
+    return (
+      <div className="min-h-screen ml-10 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">Product Not Found</h1>
+          <p className="text-gray-600">No product ID provided.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if product couldn't be loaded
+  if (!currentProduct && !loading) {
+    return (
+      <div className="min-h-screen ml-10 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">Product Not Found</h1>
+          <p className="text-gray-600">The product you are trying to edit does not exist.</p>
+          <button
+            onClick={() => router.push("/pages/inventory")}
+            className="mt-4 px-6 py-2 bg-[#C9A040] text-white rounded-lg font-medium hover:bg-[#8a6e2c] transition"
+          >
+            Back to Inventory
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen ml-10">
@@ -205,22 +330,46 @@ useEffect(() => {
           <div className="flex gap-3">
             <button
               onClick={handleCancel}
-              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition"
+              disabled={loading}
+              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
-              className="px-6 py-2 bg-[#C9A040] text-white rounded-lg font-medium hover:bg-[#8a6e2c] transition"
+              disabled={loading}
+              className="px-6 py-2 bg-[#C9A040] text-white rounded-lg font-medium hover:bg-[#8a6e2c] transition disabled:opacity-50 flex items-center gap-2"
             >
-              Save
+              {loading ? 'Saving...' : 'Save'}
             </button>
           </div>
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+            {error}
+          </div>
+        )}
+
         {/* Form */}
         <div className="bg-white rounded-lg p-6">
-          <h1 className="text-3xl font-bold mb-8 text-gray-900">Inventory Management</h1>
+          <h1 className="text-3xl font-bold mb-8 text-gray-900">Edit Product</h1>
+
+          {/* Product Name */}
+          <div className="mb-6">
+            <label className="block text-sm font-semibold text-gray-900 mb-2">
+              Product Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="productName"
+              value={formData.productName}
+              onChange={handleInputChange}
+              placeholder="Enter product name"
+              className="w-full px-4 py-3 bg-gray-100 rounded-lg text-gray-900 placeholder-gray-500 hover:bg-gray-200 transition focus:outline-none focus:ring-2 focus:ring-[#C9A040]"
+            />
+          </div>
 
           {/* Category */}
           <div className="mb-6">
@@ -232,11 +381,11 @@ useEffect(() => {
                 onClick={() => setOpenDropdown(openDropdown === 'category' ? null : 'category')}
                 className="w-full px-4 py-3 bg-gray-100 rounded-lg text-left text-gray-600 hover:bg-gray-200 transition flex justify-between items-center"
               >
-                <span>{formData.category || 'Category Name'}</span>
+                <span>{formData.category || 'Select Category'}</span>
                 <ChevronDown className="w-5 h-5" />
               </button>
               {openDropdown === 'category' && (
-                <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
+                <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                   {categories.map(cat => (
                     <button
                       key={cat}
@@ -262,7 +411,7 @@ useEffect(() => {
                 className="w-full px-4 py-3 bg-gray-100 rounded-lg text-left text-gray-600 hover:bg-gray-200 transition flex justify-between items-center"
                 disabled={!formData.category}
               >
-                <span>{formData.subCategory || 'Sub Category Name'}</span>
+                <span>{formData.subCategory || 'Select Sub Category'}</span>
                 <ChevronDown className="w-5 h-5" />
               </button>
               {openDropdown === 'subCategory' && formData.category && (
@@ -291,76 +440,85 @@ useEffect(() => {
                 onClick={() => setOpenDropdown(openDropdown === 'brand' ? null : 'brand')}
                 className="w-full px-4 py-3 bg-gray-100 rounded-lg text-left text-gray-600 hover:bg-gray-200 transition flex justify-between items-center"
               >
-                <span>{formData.brand || 'Brand Name'}</span>
+                <span>{formData.brand || 'Select Brand'}</span>
                 <ChevronDown className="w-5 h-5" />
               </button>
               {openDropdown === 'brand' && (
-                <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
-                  {brands.map(brand => (
-                    <button
-                      key={brand}
-                      onClick={() => handleDropdownSelect('brand', brand)}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-100 transition"
-                    >
-                      {brand}
-                    </button>
-                  ))}
+                <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {brands.length > 0 ? (
+                    brands.map(brand => (
+                      <button
+                        key={brand._id}
+                        onClick={() => handleDropdownSelect('brand', brand.name)}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-100 transition"
+                      >
+                        {brand.name}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-4 py-2 text-gray-500 text-sm">No brands available</div>
+                  )}
                 </div>
               )}
             </div>
           </div>
 
-          {/* Product Info */}
+          {/* Quantity and Stock */}
           <div className="grid grid-cols-2 gap-6 mb-6">
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-2">
-                Product Quantity <span className="text-red-500">*</span>
+                Quantity <span className="text-red-500">*</span>
               </label>
               <input
-                type="number"
+                type="text"
                 name="productQuantity"
                 value={formData.productQuantity}
                 onChange={handleInputChange}
+                placeholder="Enter Quantity"
                 className="w-full px-4 py-3 bg-gray-100 rounded-lg focus:ring-2 focus:ring-[#C9A040]"
               />
             </div>
+
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-2">
-                Product Stock <span className="text-red-500">*</span>
+                Stock <span className="text-red-500">*</span>
               </label>
               <input
-                type="number"
+                type="text"
                 name="productStock"
                 value={formData.productStock}
                 onChange={handleInputChange}
+                placeholder="Enter the Stock"
                 className="w-full px-4 py-3 bg-gray-100 rounded-lg focus:ring-2 focus:ring-[#C9A040]"
               />
             </div>
           </div>
 
-          {/* Price & Sale */}
+          {/* Price & Discount */}
           <div className="grid grid-cols-2 gap-6 mb-6">
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-2">
-                Product Price
+                Product Price ($) <span className="text-red-500">*</span>
               </label>
               <input
-                type="number"
+                type="text"
                 name="productPrice"
                 value={formData.productPrice}
                 onChange={handleInputChange}
+                placeholder="Enter price"
                 className="w-full px-4 py-3 bg-gray-100 rounded-lg focus:ring-2 focus:ring-[#C9A040]"
               />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-2">
-                Product Sale Price (%)
+                Discount (%) <span className="text-red-500">*</span>
               </label>
               <input
-                type="number"
+                type="text"
                 name="productSalePrice"
                 value={formData.productSalePrice}
                 onChange={handleInputChange}
+                placeholder="Enter discount percentage"
                 className="w-full px-4 py-3 bg-gray-100 rounded-lg focus:ring-2 focus:ring-[#C9A040]"
               />
             </div>
@@ -400,42 +558,88 @@ useEffect(() => {
             <label className="block text-sm font-semibold text-gray-900 mb-2">
               Product Description <span className="text-red-500">*</span>
             </label>
-            <div className="h-64 [direction:ltr]">
-              <div ref={quillRef} className="[direction:ltr] [text-align:left]" />
+            <div className="h-64 border border-gray-300 rounded-lg" style={{ direction: 'ltr' }}>
+              <div ref={quillRef} />
             </div>
           </div>
 
-          {/* Product Image */}
-          <div className="mb-6 mt-16">
+          {/* Existing Images */}
+          {formData.existingImages && formData.existingImages.length > 0 && (
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-900 mb-2">
+                Existing Images
+              </label>
+              <div className="flex gap-4 flex-wrap">
+                {formData.existingImages.map((image, index) => (
+                  <div key={index} className="relative">
+                    <div className="w-32 h-32 border rounded-lg overflow-hidden">
+                      <img
+                        src={image}
+                        alt={`Existing ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <button
+                      onClick={() => removeExistingImage(index)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Add New Images */}
+          <div className="mb-6">
             <label className="block text-sm font-semibold text-gray-900 mb-2">
-              Product Image
+              Add New Images (Multiple)
             </label>
             <div className="flex items-center gap-3">
               <button
                 onClick={handleImageSelect}
                 className="px-4 py-2 bg-[#C9A040] text-white rounded-lg font-medium hover:bg-[#8b6f2c]"
               >
-                Change Image
+                Add Images
               </button>
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
+                multiple
                 onChange={handleImageChange}
                 className="hidden"
               />
-              {formData.selectedImage && (
+              {formData.selectedImages.length > 0 && (
                 <div className="flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-lg">
-                  <span className="text-sm text-gray-700">{formData.selectedImage.name}</span>
-                  <button
-                    onClick={() => setFormData(prev => ({ ...prev, selectedImage: null }))}
-                    className="text-gray-500 hover:text-red-500"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                  <span className="text-sm text-gray-700">
+                    {formData.selectedImages.length} image(s) selected
+                  </span>
                 </div>
               )}
             </div>
+            
+            {/* Show selected image previews */}
+            {formData.selectedImages.length > 0 && (
+              <div className="mt-3 flex gap-4 flex-wrap">
+                {formData.selectedImages.map((image, index) => (
+                  <div key={index} className="relative">
+                    <img 
+                      src={image.data} 
+                      alt={`Preview ${index + 1}`} 
+                      className="w-32 h-32 object-cover rounded-lg border"
+                    />
+                    <button
+                      onClick={() => removeSelectedImage(index)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

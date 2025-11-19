@@ -84,8 +84,16 @@ export const useInventoryStore = create<InventoryState>()(
       getProductById: async (id: string) => {
         set({ loading: true, error: null });
         try {
-          const response = await api.get(`/product/getProductById/${id}`);
-          const apiResponse: SingleProductResponse = response.data;
+         const response = await api.get(`/product/getProductById/${id}`);
+         const brand = response.data.data.brandId.name;
+
+
+response.data.data.brand = brand;
+const apiResponse: SingleProductResponse = response.data;
+
+
+
+
           
           if (apiResponse.success && apiResponse.data) {
             set({ currentProduct: apiResponse.data, loading: false });

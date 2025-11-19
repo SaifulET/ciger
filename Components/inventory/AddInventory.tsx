@@ -7,29 +7,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import 'quill/dist/quill.snow.css';
 import { useQuill } from 'react-quilljs';
-
-// Define types
-interface ProductImage {
-  name: string;
-  data: string;
-}
-
-interface FormData {
-  category: string;
-  subCategory: string;
-  brand: string;
-  productName: string;
-  productQuantity: string;
-  productStock: string;
-  productPrice: string;
-  productSalePrice: string;
-  productState: string | null;
-  productDescription: string;
-  selectedImage: ProductImage | null;
-}
+import { useInventoryStore } from '@/app/store/inverntoryStore';
+import { categories, subCategories, ProductFormData, ProductImage } from'./inventory';
 
 const InventoryAddItem = () => {
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<ProductFormData>({
     category: '',
     subCategory: '',
     brand: '',
@@ -40,112 +22,66 @@ const InventoryAddItem = () => {
     productSalePrice: '',
     productState: null,
     productDescription: '',
-    selectedImage: null,
+    selectedImages: [],
+    existingImages: [],
   });
 
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const router = useRouter();
   
+  const { createProduct, getAllBrands, brands, loading, error, clearError } = useInventoryStore();
+
   // Quill editor configuration
   const { quill, quillRef } = useQuill({
     modules: {
-      toolbar: {
-        container: [
-          [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-          [{ 'size': ['small', false, 'large', 'huge'] }],
-          ['bold', 'italic', 'underline', 'strike'],
-          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-          [{ 'align': [] }],
-          [{ 'color': [] }, { 'background': [] }],
-          ['link', 'image'],
-          ['clean']
-        ]
-      }
+      toolbar: [
+        ['bold', 'italic', 'underline'],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        ['link', 'image'],
+        ['clean']
+      ]
     },
-    formats: [
-      'header',
-      'size',
-      'bold', 
-      'italic', 
-      'underline', 
-      'strike',
-      'list',
-      'align',
-      'color', 
-      'background',
-      'link', 
-      'image'
-    ],
     theme: 'snow'
   });
 
-  // Mock data for dropdowns
-  const categories = ['Electronics', 'Clothing', 'Food', 'Books'];
-  const subCategories: Record<string, string[]> = {
-    Electronics: ['Phones', 'Laptops', 'Tablets'],
-    Clothing: ['Men', 'Women', 'Kids'],
-    Food: ['Snacks', 'Beverages', 'Dairy'],
-    Books: ['Fiction', 'Non-Fiction', 'Educational'],
-  };
-  const brands = ['Samsung', 'Apple', 'Sony', 'LG', 'Generic'];
+  // Fetch brands on component mount
+  useEffect(() => {
+    getAllBrands();
+  }, [getAllBrands]);
 
   // Initialize Quill editor
   useEffect(() => {
     if (quill) {
-      // Force LTR direction at multiple levels
-      const editor = quill.root;
-      
-      // Set CSS direction and alignment
-      editor.style.direction = 'ltr';
-      editor.style.textAlign = 'left';
-      
-      // Set Quill format for direction
-      quill.format('direction', 'ltr');
-      
-      // Apply LTR to the entire editor container
-      const container = document.querySelector('.ql-container');
-      if (container) {
-        (container as HTMLElement).style.direction = 'ltr';
-        (container as HTMLElement).style.textAlign = 'left';
-      }
-
-      // Apply LTR to the editor content
-      const editorContent = document.querySelector('.ql-editor');
-      if (editorContent) {
-        (editorContent as HTMLElement).style.direction = 'ltr';
-        (editorContent as HTMLElement).style.textAlign = 'left';
-      }
-
       // Set initial content
-      quill.clipboard.dangerouslyPasteHTML(formData.productDescription || 'This is awesome!');
+      quill.clipboard.dangerouslyPasteHTML(formData.productDescription || '');
       
-      // Ensure all content has LTR direction
-      quill.formatText(0, quill.getLength(), 'direction', 'ltr');
-      
-      quill.on('text-change', () => {
+      const handler = () => {
         const html = quill.root.innerHTML;
         setFormData(prev => ({ ...prev, productDescription: html }));
-        
-        // Continuously enforce LTR direction
-        quill.format('direction', 'ltr');
-      });
+      };
 
-      // Force LTR on selection change (when user clicks or types)
-      quill.on('selection-change', () => {
-        setTimeout(() => {
-          quill.format('direction', 'ltr');
-        }, 0);
-      });
+      quill.on('text-change', handler);
+
+      return () => {
+        quill.off('text-change', handler);
+      };
     }
   }, [quill]);
+
+  // Clear error on unmount
+  useEffect(() => {
+    return () => {
+      clearError();
+    };
+  }, [clearError]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleDropdownSelect = (field: keyof FormData, value: string) => {
+  const handleDropdownSelect = (field: keyof ProductFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setOpenDropdown(null);
   };
@@ -161,55 +97,70 @@ const InventoryAddItem = () => {
     fileInputRef.current?.click();
   };
 
+  // Handle multiple image selection
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({
-          ...prev,
-          selectedImage: {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const newImages: ProductImage[] = [];
+      const filesArray = Array.from(files);
+      
+      filesArray.forEach((file, index) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          newImages.push({
             name: file.name,
             data: reader.result as string,
-          },
-        }));
-      };
-      reader.readAsDataURL(file);
+          });
+          
+          // When all files are processed, update state
+          if (newImages.length === filesArray.length) {
+            setFormData(prev => ({
+              ...prev,
+              selectedImages: [...prev.selectedImages, ...newImages]
+            }));
+          }
+        };
+        reader.readAsDataURL(file);
+      });
     }
   };
 
-  const handleSave = () => {
-    const productObject = {
-      ...formData,
-      timestamp: new Date().toISOString(),
-    };
-    console.log('Product saved:', productObject);
-    alert('Product saved! Check console for details.');
-    router.push("/pages/inventory");
+  // Remove selected image
+  const removeSelectedImage = (imageIndex: number) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedImages: prev.selectedImages.filter((_, index) => index !== imageIndex)
+    }));
+  };
+
+  const handleSave = async () => {
+    // Validate required fields
+    if (!formData.category || !formData.subCategory || !formData.brand || !formData.productName) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    // Validate numbers
+    if (!formData.productStock || !formData.productPrice) {
+      alert('Please fill in stock and price fields');
+      return;
+    }
+
+    try {
+      const result = await createProduct(formData);
+      if (result.success) {
+        alert('Product created successfully!');
+        router.push("/pages/inventory");
+      } else {
+        alert(result.message || 'Failed to create product');
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create product';
+      alert(`Failed to create product: ${errorMessage}`);
+    }
   };
 
   const handleCancel = () => {
-    setFormData({
-      category: '',
-      subCategory: '',
-      brand: '',
-      productName: '',
-      productQuantity: '',
-      productStock: '',
-      productPrice: '',
-      productSalePrice: '',
-      productState: null,
-      productDescription: '',
-      selectedImage: null,
-    });
-    
-    // Reset Quill editor content
-    if (quill) {
-      quill.clipboard.dangerouslyPasteHTML('This is awesome!');
-      quill.format('direction', 'ltr');
-      quill.formatText(0, quill.getLength(), 'direction', 'ltr');
-    }
-    
     router.push("/pages/inventory");
   };
 
@@ -229,7 +180,7 @@ const InventoryAddItem = () => {
       <div className="">
         {/* Header */}
         <div className="flex items-center justify-between mb-8 py-6 px-6 rounded-lg bg-white">
-          <div className="flex items-center gap-3 ">
+          <div className="flex items-center gap-3">
             <Link href="/pages/inventory" className='flex pl-5'>
               <button className="hover:text-gray-900">
                 <HugeiconsIcon icon={ArrowLeft02Icon} />
@@ -242,22 +193,46 @@ const InventoryAddItem = () => {
           <div className="flex gap-3">
             <button
               onClick={handleCancel}
-              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition"
+              disabled={loading}
+              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
-              className="px-6 py-2 bg-[#C9A040] text-white rounded-lg font-medium hover:bg-[#8a6e2c] transition"
+              disabled={loading}
+              className="px-6 py-2 bg-[#C9A040] text-white rounded-lg font-medium hover:bg-[#8a6e2c] transition disabled:opacity-50 flex items-center gap-2"
             >
-              Save
+              {loading ? 'Saving...' : 'Save'}
             </button>
           </div>
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+            {error}
+          </div>
+        )}
+
         {/* Form */}
         <div className="bg-white rounded-lg p-6">
-          <h1 className="text-3xl font-bold mb-8 text-gray-900">Inventory Management</h1>
+          <h1 className="text-3xl font-bold mb-8 text-gray-900">Add New Product</h1>
+
+          {/* Product Name */}
+          <div className="mb-6">
+            <label className="block text-sm font-semibold text-gray-900 mb-2">
+              Product Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="productName"
+              value={formData.productName}
+              onChange={handleInputChange}
+              placeholder="Enter product name"
+              className="w-full px-4 py-3 bg-gray-100 rounded-lg text-gray-900 placeholder-gray-500 hover:bg-gray-200 transition focus:outline-none focus:ring-2 focus:ring-[#C9A040]"
+            />
+          </div>
 
           {/* Category */}
           <div className="mb-6">
@@ -269,16 +244,16 @@ const InventoryAddItem = () => {
                 onClick={() => setOpenDropdown(openDropdown === 'category' ? null : 'category')}
                 className="w-full px-4 py-3 bg-gray-100 rounded-lg text-left text-gray-600 hover:bg-gray-200 transition flex justify-between items-center"
               >
-                <span>{formData.category || 'Category Name'}</span>
+                <span>{formData.category || 'Select Category'}</span>
                 <ChevronDown className="w-5 h-5" />
               </button>
               {openDropdown === 'category' && (
-                <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
+                <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                   {categories.map(cat => (
                     <button
                       key={cat}
                       onClick={() => handleCategorySelect(cat)}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-100 first:rounded-t-lg last:rounded-b-lg transition"
+                      className="w-full px-4 py-2 text-left hover:bg-gray-100 transition"
                     >
                       {cat}
                     </button>
@@ -296,10 +271,10 @@ const InventoryAddItem = () => {
             <div className="relative">
               <button
                 onClick={() => setOpenDropdown(openDropdown === 'subCategory' ? null : 'subCategory')}
-                className="w-full px-4 py-3 bg-gray-100 rounded-lg text-left text-gray-600 hover:bg-gray-200 transition flex justify-between items-center"
                 disabled={!formData.category}
+                className="w-full px-4 py-3 bg-gray-100 rounded-lg text-left text-gray-600 hover:bg-gray-200 transition flex justify-between items-center disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <span>{formData.subCategory || 'Sub Category Name'}</span>
+                <span>{formData.subCategory || 'Select Sub Category'}</span>
                 <ChevronDown className="w-5 h-5" />
               </button>
               {openDropdown === 'subCategory' && formData.category && (
@@ -332,96 +307,86 @@ const InventoryAddItem = () => {
                 onClick={() => setOpenDropdown(openDropdown === 'brand' ? null : 'brand')}
                 className="w-full px-4 py-3 bg-gray-100 rounded-lg text-left text-gray-600 hover:bg-gray-200 transition flex justify-between items-center"
               >
-                <span>{formData.brand || 'Brand Name'}</span>
+                <span>{formData.brand || 'Select Brand'}</span>
                 <ChevronDown className="w-5 h-5" />
               </button>
               {openDropdown === 'brand' && (
-                <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
-                  {brands.map(brand => (
-                    <button
-                      key={brand}
-                      onClick={() => handleDropdownSelect('brand', brand)}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-100 first:rounded-t-lg last:rounded-b-lg transition"
-                    >
-                      {brand}
-                    </button>
-                  ))}
+                <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {brands.length > 0 ? (
+                    brands.map(brand => (
+                      <button
+                        key={brand._id}
+                        onClick={() => handleDropdownSelect('brand', brand.name)}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-100 transition"
+                      >
+                        {brand.name}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-4 py-2 text-gray-500 text-sm">No brands available</div>
+                  )}
                 </div>
               )}
             </div>
           </div>
 
-          {/* Product Name */}
-          <div className="mb-6">
-            <label className="block text-sm font-semibold text-gray-900 mb-2">
-              Product Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="productName"
-              value={formData.productName}
-              onChange={handleInputChange}
-              placeholder="Name"
-              className="w-full px-4 py-3 bg-gray-100 rounded-lg text-gray-900 placeholder-gray-500 hover:bg-gray-200 transition focus:outline-none focus:ring-2 focus:ring-[#C9A040]"
-            />
-          </div>
-
-          {/* Product Quantity and Stock */}
+          {/* Quantity and Stock */}
           <div className="grid grid-cols-2 gap-6 mb-6">
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-2">
-                Product Quantity <span className="text-red-500">*</span>
+                Quantity <span className="text-red-500">*</span>
               </label>
               <input
-                type="number"
+                type="text"
                 name="productQuantity"
                 value={formData.productQuantity}
                 onChange={handleInputChange}
-                placeholder="Quantity"
-                className="w-full px-4 py-3 bg-gray-100 rounded-lg text-gray-900 placeholder-gray-500 hover:bg-gray-200 transition focus:outline-none focus:ring-2 focus:ring-[#C9A040]"
+                placeholder="Enter Quantity"
+                className="w-full px-4 py-3 bg-gray-100 rounded-lg focus:ring-2 focus:ring-[#C9A040]"
               />
             </div>
+
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-2">
-                Product Stock <span className="text-red-500">*</span>
+                Stock <span className="text-red-500">*</span>
               </label>
               <input
-                type="number"
+                type="text"
                 name="productStock"
                 value={formData.productStock}
                 onChange={handleInputChange}
-                placeholder="Stock"
-                className="w-full px-4 py-3 bg-gray-100 rounded-lg text-gray-900 placeholder-gray-500 hover:bg-gray-200 transition focus:outline-none focus:ring-2 focus:ring-[#C9A040]"
+                placeholder="Enter the Stock"
+                className="w-full px-4 py-3 bg-gray-100 rounded-lg focus:ring-2 focus:ring-[#C9A040]"
               />
             </div>
           </div>
 
-          {/* Product Price and Sale Price */}
+          {/* Price & Discount */}
           <div className="grid grid-cols-2 gap-6 mb-6">
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-2">
-                Product Price <span className="text-red-500">*</span>
+                Product Price ($) <span className="text-red-500">*</span>
               </label>
               <input
-                type="number"
+                type="text"
                 name="productPrice"
                 value={formData.productPrice}
                 onChange={handleInputChange}
-                placeholder="Price"
-                className="w-full px-4 py-3 bg-gray-100 rounded-lg text-gray-900 placeholder-gray-500 hover:bg-gray-200 transition focus:outline-none focus:ring-2 focus:ring-[#C9A040]"
+                placeholder="Enter price"
+                className="w-full px-4 py-3 bg-gray-100 rounded-lg focus:ring-2 focus:ring-[#C9A040]"
               />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-2">
-                Product Sale Price in discount % <span className="text-red-500">*</span>
+                Discount (%) <span className="text-red-500">*</span>
               </label>
               <input
-                type="number"
+                type="text"
                 name="productSalePrice"
                 value={formData.productSalePrice}
                 onChange={handleInputChange}
-                placeholder="Sale Price"
-                className="w-full px-4 py-3 bg-gray-100 rounded-lg text-gray-900 placeholder-gray-500 hover:bg-gray-200 transition focus:outline-none focus:ring-2 focus:ring-[#C9A040]"
+                placeholder="Enter discount percentage"
+                className="w-full px-4 py-3 bg-gray-100 rounded-lg focus:ring-2 focus:ring-[#C9A040]"
               />
             </div>
           </div>
@@ -429,7 +394,7 @@ const InventoryAddItem = () => {
           {/* Product State */}
           <div className="mb-6">
             <label className="block text-sm font-semibold text-gray-900 mb-2">
-              Product State <span className="text-red-500">*</span>
+              Product State
             </label>
             <div className="flex gap-3">
               <button
@@ -460,40 +425,60 @@ const InventoryAddItem = () => {
             <label className="block text-sm font-semibold text-gray-900 mb-2">
               Product Description <span className="text-red-500">*</span>
             </label>
-            <div className="h-64" style={{ direction: 'ltr' }}>
+            <div className="h-64 border border-gray-300 rounded-lg" style={{ direction: 'ltr' }}>
               <div ref={quillRef} />
             </div>
           </div>
 
-          {/* Choose Image */}
-          <div className="mb-6  mt-16">
-            <label className="block text-sm font-semibold text-gray-900 mb-2">Choose Image</label>
+          {/* Add New Images */}
+          <div className="mb-6">
+            <label className="block text-sm font-semibold text-gray-900 mb-2">
+              Add New Images (Multiple)
+            </label>
             <div className="flex items-center gap-3">
               <button
                 onClick={handleImageSelect}
-                className="px-4 py-2 bg-[#C9A040] text-white rounded-lg font-medium hover:bg-[#8b6f2c] transition"
+                className="px-4 py-2 bg-[#C9A040] text-white rounded-lg font-medium hover:bg-[#8b6f2c]"
               >
-                Select image
+                Add Images
               </button>
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
+                multiple
                 onChange={handleImageChange}
                 className="hidden"
               />
-              {formData.selectedImage && (
+              {formData.selectedImages.length > 0 && (
                 <div className="flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-lg">
-                  <span className="text-sm text-gray-700">{formData.selectedImage.name}</span>
-                  <button
-                    onClick={() => setFormData(prev => ({ ...prev, selectedImage: null }))}
-                    className="text-gray-500 hover:text-red-500 transition"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                  <span className="text-sm text-gray-700">
+                    {formData.selectedImages.length} image(s) selected
+                  </span>
                 </div>
               )}
             </div>
+            
+            {/* Show selected image previews */}
+            {formData.selectedImages.length > 0 && (
+              <div className="mt-3 flex gap-4 flex-wrap">
+                {formData.selectedImages.map((image, index) => (
+                  <div key={index} className="relative">
+                    <img 
+                      src={image.data} 
+                      alt={`Preview ${index + 1}`} 
+                      className="w-32 h-32 object-cover rounded-lg border"
+                    />
+                    <button
+                      onClick={() => removeSelectedImage(index)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

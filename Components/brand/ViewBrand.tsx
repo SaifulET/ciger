@@ -3,51 +3,57 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { PencilEdit02Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
-
-interface Brand {
-  id: number;
-  name: string;
-  image: string;
-}
-
-const brandData: Brand[] = [
-  { id: 1, name: "Brand Name", image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200&h=200&fit=crop" },
-  { id: 2, name: "Tech Brand", image: "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=200&h=200&fit=crop" },
-  { id: 3, name: "Fashion Co", image: "https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=200&h=200&fit=crop" },
-  { id: 4, name: "Luxury Items", image: "https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=200&h=200&fit=crop" },
-  { id: 5, name: "Sport Gear", image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200&h=200&fit=crop" },
-  { id: 6, name: "Home Decor", image: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=200&h=200&fit=crop" },
-  { id: 7, name: "Beauty Pro", image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=200&h=200&fit=crop" },
-  { id: 8, name: "Food & Bev", image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200&h=200&fit=crop" },
-  { id: 9, name: "Electronics", image: "" },
-  { id: 10, name: "Automotive", image: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=200&h=200&fit=crop" },
-];
+import { useBrandStore } from '@/app/store/brandStore';
 
 const BrandView: React.FC = () => {
   const params = useParams();
   const router = useRouter();
-  const [brand, setBrand] = useState<Brand | null>(null);
+  const { currentBrand, loading, error, fetchBrandById, deleteBrand } = useBrandStore();
 
   useEffect(() => {
-    const id = Number(params?.id);
-    if (isNaN(id)) return;
+    const id = params?.id as string;
+    if (id) {
+      fetchBrandById(id);
+    }
+  }, [params, fetchBrandById]);
 
-    const foundBrand = brandData.find(b => b.id === id);
-    setBrand(foundBrand || null);
-  }, [params]);
-
-  const handleDelete = () => {
-    if (!brand) return;
-    console.log(`Brand with ID ${brand.id} has been deleted`);
-    router.push('/pages/brand');
+  const handleDelete = async () => {
+    if (!currentBrand) return;
+    
+    if (confirm('Are you sure you want to delete this brand?')) {
+      await deleteBrand(currentBrand._id);
+      if (!error) {
+        router.push('/pages/brand');
+      }
+    }
   };
 
   const handleEdit = () => {
-    if (!brand) return;
-    router.push(`/pages/brand/edit/${brand.id}`);
+    if (!currentBrand) return;
+    router.push(`/pages/brand/edit/${currentBrand._id}`);
   };
 
-  if (!brand) {
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-8">
+        <div className="max-w-2xl mx-auto">
+          <p className="text-center text-gray-600">Loading brand...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-8">
+        <div className="max-w-2xl mx-auto">
+          <p className="text-center text-red-600">Error: {error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentBrand) {
     return (
       <div className="min-h-screen bg-gray-50 p-8">
         <div className="max-w-2xl mx-auto">
@@ -81,6 +87,13 @@ const BrandView: React.FC = () => {
 
         {/* Form Container */}
         <div className="bg-white rounded-lg shadow-sm p-8">
+          {/* Error Display */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-700">{error}</p>
+            </div>
+          )}
+
           {/* Brand Name */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -88,7 +101,7 @@ const BrandView: React.FC = () => {
             </label>
             <input
               type="text"
-              value={brand.name}
+              value={currentBrand.name}
               readOnly
               className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
               placeholder="Enter name"
@@ -102,20 +115,29 @@ const BrandView: React.FC = () => {
                 Display Brand on featured section
               </span>
               <div className="relative inline-block w-11 h-6">
-                <input type="checkbox" className="peer sr-only" disabled />
-                <div className="w-11 h-6 bg-gray-300 rounded-full peer-checked:bg-blue-600 transition-colors"></div>
-                <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
+                <input 
+                  type="checkbox" 
+                  checked={currentBrand.feature} 
+                  className="peer sr-only" 
+                  disabled 
+                />
+                <div className={`w-11 h-6 rounded-full transition-colors ${
+                  currentBrand.feature ? 'bg-blue-600' : 'bg-gray-300'
+                }`}></div>
+                <div className={`absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                  currentBrand.feature ? 'translate-x-5' : ''
+                }`}></div>
               </div>
             </label>
           </div>
 
           {/* Choose Image */}
           <div className="mb-6">
-            {brand.image ? (
+            {currentBrand.image ? (
               <div className="relative">
                 <img
-                  src={brand.image}
-                  alt={brand.name}
+                  src={currentBrand.image}
+                  alt={currentBrand.name}
                   className="w-64 h-64  rounded-lg border border-gray-300"
                 />
               </div>
