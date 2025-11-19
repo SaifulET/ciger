@@ -4,11 +4,13 @@
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { NextPage } from 'next';
-import Logo from '@/public/Tele-Portes Logo.svg';
-import Pattern from '@/public/pattern.svg';
+
 import { useRouter } from 'next/navigation'
 import Image from 'next/image';
 import logo from "@/public/logo.svg"
+import useUserStore from "@/app/store/userStore";
+
+
 
 const SignUpPage: NextPage = () => {
   const [firstName, setFirstName] = useState<string>('');
@@ -17,7 +19,9 @@ const SignUpPage: NextPage = () => {
   const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string>("");
   const router = useRouter();
+  const {loginFormData,loginOnChange,UserSignupRequest}=useUserStore()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,9 +29,17 @@ const SignUpPage: NextPage = () => {
     
     try {
       // Replace with your account creation logic
-      console.log('Sign up attempt:', { firstName, lastName, email, password });
+ const res = await UserSignupRequest(email, password,firstName,lastName);
+console.log(res)
+     if(res.status!=="error"){
       router.push("/auth/signin")
+     }
+     else{
+setErrorMessage(res.message ??"")
+     }
+      
     } catch (error) {
+      
       console.error('Sign up error:', error);
     } finally {
       setIsLoading(false);
@@ -50,7 +62,7 @@ const SignUpPage: NextPage = () => {
       {/* Logo */}
       <div className="w-[500px] h-24 flex items-center justify-center ">
         {/* <Image src={Logo} alt='logo'/> */}
-        <Image src={logo} alt="logo" width={150} height={150} className='rounded-full'/>
+        <Image src={logo} alt="logo" width={220} height={220} className='rounded-full'/>
       </div>
 
       {/* Welcome text */}
@@ -162,6 +174,12 @@ const SignUpPage: NextPage = () => {
             "Create"
           )}
         </button>
+         {errorMessage && (
+              <p className="text-red-600 text-sm text-center">
+                {errorMessage}
+              </p>
+            )}
+
 
         {/* Login Link */}
         <p className="text-center text-gray-500 text-base leading-6 mb-[32px]">
@@ -174,6 +192,7 @@ const SignUpPage: NextPage = () => {
           >
             Login
           </button>
+
         </p>
 
       </form>

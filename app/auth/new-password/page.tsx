@@ -5,6 +5,7 @@ import { ArrowLeft, Lock, Eye, EyeOff } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import logo from "@/public/logo.svg"
+import useUserStore from '@/app/store/userStore';
 
 const NewPassword: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
@@ -13,9 +14,22 @@ const NewPassword: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const router = useRouter();
 
-  const handleNext = () => {
-   
-    router.push('/auth/welcome'); 
+   const [errorMessage, setErrorMessage] = useState<string>("");
+    const {loginFormData,loginOnChange,UserNewPassword}=useUserStore()
+
+
+  const handleNext = async() => {
+    console.log("h")
+   const res = await UserNewPassword(newPassword,confirmPassword);
+   console.log(res)
+   if (res.status==="success") {
+    setErrorMessage("t");
+    console.log(res.message)
+    router.push('/auth/welcome');
+  } else {
+    console.log("y")
+    setErrorMessage(res.message || "Something went wrong");
+  }
   };
 
   const handleBackToLogin = () => {
@@ -32,7 +46,7 @@ const NewPassword: React.FC = () => {
           {/* Logo */}
           <div className="w-[500px] h-24 flex items-center justify-center">
             <div className="text-center">
-              <Image src={logo} alt="logo" width={150} height={150} className='rounded-full'/>
+              <Image src={logo} alt="logo" width={220} height={220} className='rounded-full'/>
                {/* <Image src={Logo} alt='logo'/> */}
             </div>
           </div>

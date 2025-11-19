@@ -7,22 +7,28 @@ import { NextPage } from "next";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import logo from "@/public/logo.svg"
+import useUserStore from "@/app/store/userStore";
 
 const ForgotPasswordPage: NextPage = () => {
   const [email, setEmail] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string>("");
+    const {loginFormData,loginOnChange,UserForgetPasswordRequest}=useUserStore()
+
   const router = useRouter();
+
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-
-    try {
+    console.log(email)
+    const res = await UserForgetPasswordRequest(email);
+  console.log(res);
+    if (res.message==="OTP sent to email" ) {
       router.push("/auth/otp");
-    } catch (error) {
-      console.error("Forgot password error:", error);
-    } finally {
-      setIsLoading(false);
+    } else {
+      setIsLoading(true)
+      setErrorMessage(res.message || "Something went wrong");
     }
   };
 
@@ -42,7 +48,7 @@ const ForgotPasswordPage: NextPage = () => {
           <div className="w-full max-w-[500px] h-24 flex items-center justify-center">
             <div className="text-center">
               {/* <Image src={Logo} alt='logo'/> */}
-              <Image src={logo} alt="logo" width={150} height={150} className='rounded-full'/>
+              <Image src={logo} alt="logo" width={220} height={220} className='rounded-full'/>
             </div>
           </div>
 
@@ -111,6 +117,11 @@ const ForgotPasswordPage: NextPage = () => {
               <ArrowLeft className="w-6 h-6" strokeWidth={1.5} />
               Back to Login
             </button>
+            {errorMessage && (
+              <p className="text-red-600 text-sm text-center">
+                {errorMessage}
+              </p>
+            )}
           </div>
         </div>
       </div>
