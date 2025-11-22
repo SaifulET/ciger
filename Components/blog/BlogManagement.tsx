@@ -32,9 +32,16 @@ const BlogCard: React.FC<BlogCardProps> = ({ id, image, title, description }) =>
       />
       <div className="p-4">
         <h3 className="text-lg font-semibold mb-2">{title}</h3>
-        <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-          {description || 'No description available'}
-        </p>
+        
+
+        <div 
+  className="text-gray-700 text-sm leading-relaxed"
+  dangerouslySetInnerHTML={{ 
+    __html: description 
+      ? (description.length > 200 ? `${description.substring(0, 200)}...` : description)
+      : 'No description available' 
+  }}
+/>
         <div className="flex justify-between">
           <button 
             onClick={handleEdit}

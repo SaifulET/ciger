@@ -13,32 +13,28 @@ export default function EditBlog() {
   const params = useParams();
   const id = params.id as string;
   
-  const { currentBlog, fetchBlogById, updateBlog, loading, setCurrentBlog } = useBlogStore();
+  const { currentBlog, fetchBlogById, updateBlog, loading, error, setCurrentBlog } = useBlogStore();
   const [title, setTitle] = useState('');
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
   const [description, setDescription] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // State to track initialization
   const [isInitialDataLoaded, setIsInitialDataLoaded] = useState(false);
   const [isQuillReady, setIsQuillReady] = useState(false);
 
-  const toolbarOptions = [
-    [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-    ['bold', 'italic', 'underline', 'strike'],
-    [{ 'align': [] }],
-    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-    ['link', 'image'],
-    [{ 'color': [] }, { 'background': [] }],
-    ['clean']
-  ];
-
-  // Quill editor configuration
   const { quill, quillRef } = useQuill({
     theme: 'snow',
     modules: {
-      toolbar: toolbarOptions
+      toolbar: [
+        [{ header: [1, 2, 3, 4, 5, 6, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ align: [] }],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        ['link', 'image'],
+        [{ color: [] }, { background: [] }],
+        ['clean']
+      ],
     },
   });
 
@@ -62,7 +58,6 @@ export default function EditBlog() {
   // Fetch blog data when component mounts or id changes
   useEffect(() => {
     if (id) {
-      // Clear current blog before fetching new one
       setCurrentBlog(null);
       fetchBlogById(id);
     }
@@ -71,8 +66,6 @@ export default function EditBlog() {
   // Update form data when currentBlog changes
   useEffect(() => {
     if (currentBlog && currentBlog._id === id && !isInitialDataLoaded) {
-      console.log('Setting form data for blog:', currentBlog.name);
-      
       setTitle(currentBlog.name || '');
       setImagePreview(currentBlog.image || '');
       setDescription(currentBlog.description || '');
@@ -83,16 +76,10 @@ export default function EditBlog() {
   // Initialize Quill editor when it's ready and data is loaded
   useEffect(() => {
     if (quill && isInitialDataLoaded && !isQuillReady) {
-      console.log('Initializing Quill with content:', description);
-      
-      // Clear any existing content first
       quill.setText('');
-      
-      // Set the content from database
       if (description) {
         quill.clipboard.dangerouslyPasteHTML(description);
       }
-      
       setIsQuillReady(true);
     }
   }, [quill, isInitialDataLoaded, isQuillReady, description]);
@@ -102,9 +89,6 @@ export default function EditBlog() {
     if (quill && isQuillReady) {
       const handler = () => {
         const html = quill.root.innerHTML;
-        console.log('Quill content changed:', html);
-        
-        // Only update if content actually changed (not the initial set or empty)
         if (html !== description && html !== '<p><br></p>') {
           setDescription(html);
         }
@@ -133,7 +117,7 @@ export default function EditBlog() {
   const handleRemoveImage = () => {
     setImage(null);
     if (currentBlog) {
-      setImagePreview(currentBlog.image); // Reset to original image
+      setImagePreview(currentBlog.image);
     } else {
       setImagePreview('');
     }
@@ -142,43 +126,21 @@ export default function EditBlog() {
     }
   };
 
-  // Helper function to debug FormData
-  
-
   const handleSave = async () => {
-    console.log('Current state before save:', { 
-      title, 
-      description, 
-      descriptionLength: description.length,
-      image: image?.name 
-    });
-    
-    if (!title.trim() || !description.trim() ) {
-      console.log('Validation failed:', { 
-        title: title.trim(), 
-        description: description.trim(),
-        isEmpty: description === '<p><br></p>'
-      });
+    if (!title.trim() || !description.trim() || description === '<p><br></p>') {
       alert('Please fill in all required fields');
       return;
     }
 
-    const formData = new FormData();
-    formData.append('name', title);
-    formData.append('description', description);
-    console.log(formData,'1')
-    
-    if (image) {
-      formData.append('image', image);
-    }
-
-    // Debug FormData contents
-   
+    // Create JSON-like data object to pass to store
+    const blogData = {
+      name: title,
+      description: description,
+      image: image || currentBlog?.image, // Pass File object or existing image URL
+    };
 
     try {
-      const result = await updateBlog(id, formData);
-      console.log('Update result:', result);
-      
+      const result = await updateBlog(id, blogData);
       if (result.success) {
         router.push('/pages/blogs');
       } else {
@@ -195,7 +157,7 @@ export default function EditBlog() {
     router.push('/pages/blogs');
   };
 
-  // Add loading state while fetching data
+  // Loading state
   if (!currentBlog && loading) {
     return (
       <div className="min-h-screen ml-16 flex items-center justify-center">
@@ -218,7 +180,6 @@ export default function EditBlog() {
     );
   }
 
-  // Show error state if blog couldn't be loaded
   if (!currentBlog && !loading) {
     return (
       <div className="min-h-screen ml-16 flex items-center justify-center">
@@ -241,7 +202,6 @@ export default function EditBlog() {
       <div>
         {/* Header Section */}
         <div className="bg-white mb-6 shadow-sm px-8 py-6 rounded-lg">
-          {/* Breadcrumb */}
           <div className="flex items-center gap-3 text-sm text-gray-600 mb-6">
             <button
               onClick={() => router.push('/pages/blogs')}
@@ -254,7 +214,6 @@ export default function EditBlog() {
             <span className="text-gray-900 font-medium">Edit Blog</span>
           </div>
 
-          {/* Title and Actions */}
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold text-gray-900">Edit Blog</h1>
             <div className="flex items-center gap-3">
@@ -336,11 +295,14 @@ export default function EditBlog() {
             <div className="bg-gray-50 border border-gray-300 rounded-lg overflow-hidden" style={{ direction: 'ltr' }}>
               <div ref={quillRef} className="min-h-[300px]" />
             </div>
-            <div className="mt-2 text-xs text-gray-500">
-              Current description: {description.length} characters
-              {description === '<p><br></p>' && ' (Empty)'}
-            </div>
           </div>
+
+          {/* Error Display */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-700 text-sm">{error}</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

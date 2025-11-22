@@ -58,13 +58,13 @@ export interface ApiResponse {
 }
 
 export const categoriesData = [
-  { "label": "Tobacco Products", "subItems": ["Cigar", "Premium Cigar"] },
+  { "label": "Tobacco Products", "subItems": ["Cigar", "Premium Cigar","Pipe Tobacco"] },
   { "label": "Hookah", "subItems": ["Hookah Pipes", "Hookah Tobacco"] },
   { "label": "Nicotine Vapes", "subItems": ["Disposables"] },
   { "label": "Smokeless Tobacco", "subItems": ["Chewing Tobacco", "Snuff", "Nicotine Pouches", "Snus"] },
   { "label": "General Accessories", "subItems": ["Lighters & Torch Lighters", "Ashtrays", "Tolling Machines", "Storage & Cases", "Cleaning Tools"] },
   { "label": "THC", "subItems": ["Flowers", "PreRolls", "Disposables/Cartridges", "Edibles", "Concentrates"] },
-  { "label": "7-Hydroxy", "subItems": ["Tabs", "Vapes", "Shots"] }
+  { "label": "Roll Your Own", "subItems": ["Tubes", "Wraps", "Rolling Papers","Pre-Rolled Cones"] }
 ];
 
 export const categories = categoriesData.map(cat => cat.label);

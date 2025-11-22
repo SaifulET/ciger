@@ -1,43 +1,141 @@
 'use client'
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Edit2, X, Save } from 'lucide-react';
 import { PencilEdit02Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
+import api from '@/lib/axios';
 
 interface ProfileData {
+  _id?: string;
+  firstName?: string;
+  lastName?: string;
   name: string;
   phone: string;
   email: string;
-  avatar: string;
+  image: string;
+  isSignin?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
-
-const initialData: ProfileData = {
-  name: "John Doe",
-  phone: "+1 (555) 123-4567",
-  email: "john.doe@example.com",
-  avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop"
-};
 
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
-  const [profileData, setProfileData] = useState<ProfileData>(initialData);
-  const [tempData, setTempData] = useState<ProfileData>(initialData);
+  const [profileData, setProfileData] = useState<ProfileData>({
+    name: "",
+    phone: "",
+    email: "",
+    image: ""
+  });
+  const [tempData, setTempData] = useState<ProfileData>({
+    name: "",
+    phone: "",
+    email: "",
+    image: ""
+  });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Fetch profile data from API
+  const fetchProfileData = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/admin/getAdmin');
+      const result = await response.data;
+      
+      if (result.success) {
+        const apiData = result.data;
+        const formattedData: ProfileData = {
+          _id: apiData._id,
+          name: apiData.name || `${apiData.firstName || ''} ${apiData.lastName || ''}`.trim() || 'No Name',
+          phone: apiData.phone || '',
+          email: apiData.email,
+          image: apiData.image,
+          isSignin: apiData.isSignin,
+          createdAt: apiData.createdAt,
+          updatedAt: apiData.updatedAt
+        };
+        
+        setProfileData(formattedData);
+        setTempData(formattedData);
+      }
+    } catch (error) {
+      console.error('Error fetching profile data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProfileData();
+  }, []);
 
   const handleEdit = () => {
     setIsEditing(true);
     setTempData(profileData);
+    setImageFile(null);
   };
 
   const handleCancel = () => {
     setIsEditing(false);
     setTempData(profileData);
+    setImageFile(null);
   };
 
-  const handleSave = () => {
-    setProfileData(tempData);
-    setIsEditing(false);
-    console.log('Saved Profile Data:', tempData);
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      
+      // Create FormData to handle file upload
+
+      console.log(tempData,"92")
+      const formData = new FormData();
+      
+      // Add text fields
+      formData.append('name', tempData.name);
+      formData.append('phone', tempData.phone);
+      formData.append('email', tempData.email);
+      
+      // Add image file if a new one was selected
+      if (imageFile) {
+        formData.append('image', imageFile);
+      }
+
+      const response = await api.put('/admin/updateAdmin', 
+        formData,{headers: { 'Content-Type': 'multipart/form-data' }},
+      
+      );
+
+      const result = await response.data;
+
+      if (result.success) {
+        const updatedData = result.data;
+        const formattedData: ProfileData = {
+          _id: updatedData._id,
+          name: updatedData.name || `${updatedData.firstName || ''} ${updatedData.lastName || ''}`.trim(),
+          phone: updatedData.phone,
+          email: updatedData.email,
+          image: updatedData.image || tempData.image,
+          isSignin: updatedData.isSignin,
+          createdAt: updatedData.createdAt,
+          updatedAt: updatedData.updatedAt
+        };
+        
+        setProfileData(formattedData);
+        setIsEditing(false);
+        setImageFile(null);
+        console.log('Profile updated successfully:', formattedData);
+      } else {
+        console.error('Failed to update profile:', result);
+        // Handle error (you might want to show an error message to the user)
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      // Handle error (you might want to show an error message to the user)
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleChange = (field: keyof ProfileData, value: string) => {
@@ -55,18 +153,29 @@ export default function ProfilePage() {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setTempData(prev => ({ ...prev, avatar: reader.result as string }));
+        // Set the preview image
+        setTempData(prev => ({ ...prev, image: reader.result as string }));
+        // Store the actual file for upload
+        setImageFile(file);
       };
       reader.readAsDataURL(file);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen ml-8 flex items-center justify-center">
+        <div className="text-lg">Loading profile...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen ml-8">
       <div className="">
         {/* Header */}
         <div className="flex justify-between items-center mb-8 bg-white px-10 py-6 rounded-lg">
-          <h1 className="text-3xl font-bold text-gray-900 ">Profile</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Profile</h1>
           {!isEditing ? (
             <button
               onClick={handleEdit}
@@ -79,17 +188,19 @@ export default function ProfilePage() {
             <div className="flex gap-3">
               <button
                 onClick={handleCancel}
-                className="flex items-centerjustify-center gap-2 px-6 py-3 bg-gray-200 font-semibold text-[16px] leading-[24px] tracking-[0]text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                disabled={saving}
+                className="flex items-center justify-center gap-2 px-6 py-3 bg-gray-200 font-semibold text-[16px] leading-[24px] tracking-[0] text-gray-700 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
               >
                 <X size={18} />
                 Cancel
               </button>
               <button
                 onClick={handleSave}
-                className="flex items-center justify-center gap-2 px-6 py-3 bg-[#C9A040] text-gray-800 font-semibold text-[16px] leading-[24px] tracking-[0] rounded-lg hover:bg-[#9e7e33] transition-colors"
+                disabled={saving}
+                className="flex items-center justify-center gap-2 px-6 py-3 bg-[#C9A040] text-gray-800 font-semibold text-[16px] leading-[24px] tracking-[0] rounded-lg hover:bg-[#9e7e33] transition-colors disabled:opacity-50"
               >
                 <Save size={18} />
-                Save
+                {saving ? 'Saving...' : 'Save'}
               </button>
             </div>
           )}
@@ -102,7 +213,7 @@ export default function ProfilePage() {
             <div className="relative w-48 h-48">
               <div className="w-48 h-48 rounded-full overflow-hidden border-4 border-gray-100">
                 <img
-                  src={tempData.avatar}
+                  src={isEditing ? tempData.image : profileData.image}
                   alt="Profile"
                   className="w-full h-full object-cover"
                 />
@@ -148,7 +259,7 @@ export default function ProfilePage() {
                     />
                   ) : (
                     <div className="w-full px-4 py-4 bg-[#F5F5F5] rounded-lg text-gray-900">
-                      {profileData.name}
+                      {profileData.name || 'Not set'}
                     </div>
                   )}
                 </div>
@@ -168,7 +279,7 @@ export default function ProfilePage() {
                     />
                   ) : (
                     <div className="w-full px-4 py-4 bg-[#F5F5F5] rounded-lg text-gray-900">
-                      {profileData.phone}
+                      {profileData.phone || 'Not set'}
                     </div>
                   )}
                 </div>

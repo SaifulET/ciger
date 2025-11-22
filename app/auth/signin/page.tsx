@@ -62,16 +62,16 @@ const SignInPage: NextPage = () => {
   };
 
   // If already logged in, show loading while redirecting
-  if (user.length>0) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Redirecting...</p>
-        </div>
-      </div>
-    );
-  }
+  // if (user.length>0) {
+  //   return (
+  //     <div className="min-h-screen bg-white flex items-center justify-center">
+  //       <div className="text-center">
+  //         <div className="w-12 h-12 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+  //         <p className="text-gray-600">Redirecting...</p>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="min-h-screen bg-white relative overflow-hidden">

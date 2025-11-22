@@ -10,7 +10,7 @@ import { useBlogStore } from '@/app/store/blogStore';
 
 export default function CreateBlog() {
   const router = useRouter();
-  const { createBlog, loading } = useBlogStore();
+  const { createBlog, loading, error } = useBlogStore();
   const [title, setTitle] = useState('');
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
@@ -61,7 +61,7 @@ export default function CreateBlog() {
   };
 
   const handlePost = async () => {
-    if (!description) {
+    if (!title.trim() || !description.trim() || description === '<p><br></p>') {
       alert('Please fill in all required fields');
       return;
     }
@@ -71,18 +71,23 @@ export default function CreateBlog() {
       return;
     }
 
-    const formData = new FormData();
-    formData.append('name', title);
-    formData.append('description', description);
-    formData.append('image', image); // Pass the actual File object
+    // Create JSON-like data object to pass to store
+    const blogData = {
+      name: title,
+      description: description,
+      image: image, // Pass the File object directly
+    };
 
     try {
-      const result = await createBlog(formData);
+      const result = await createBlog(blogData);
       if (result.success) {
         router.push('/pages/blogs');
+      } else {
+        alert(result.message || 'Failed to create blog');
       }
     } catch (error) {
       console.error('Error creating blog:', error);
+      alert('Error creating blog');
     }
   };
 
@@ -160,7 +165,7 @@ export default function CreateBlog() {
             {imagePreview && (
               <div className="mt-3">
                 <img src={imagePreview} alt="Preview" className="max-w-xs rounded border" />
-                <p className="text-sm text-gray-600 mt-1">Selected: </p>
+                <p className="text-sm text-gray-600 mt-1">Selected: {image?.name}</p>
               </div>
             )}
           </div>
@@ -172,6 +177,13 @@ export default function CreateBlog() {
               <div ref={quillRef} className="min-h-[300px]" />
             </div>
           </div>
+
+          {/* Error Display */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-700 text-sm">{error}</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
