@@ -4,35 +4,36 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
-
-interface ServiceData {
-  shippingCost: number;
-  advertisingText: string;
-  minimumFreeShippingAmount: number;
-}
-
-// Simulated JSON data (in real app, import or fetch this)
-const jsonData: ServiceData = {
-  shippingCost: 50,
-  advertisingText: "Free shipping for orders above $200!",
-  minimumFreeShippingAmount: 200,
-};
+import { useServicePricingStore, convertToFormData, ServicePricingFormData } from "@/app/store/servicePricing";
 
 export default function EditServicePricing() {
   const router = useRouter();
-  const [formData, setFormData] = useState<ServiceData>({
+  const { servicePricing, loading, fetchServicePricing, updateServicePricing } = useServicePricingStore();
+  
+  const [formData, setFormData] = useState<ServicePricingFormData>({
     shippingCost: 0,
     advertisingText: "",
     minimumFreeShippingAmount: 0,
   });
 
-  const [initialData, setInitialData] = useState<ServiceData | null>(null);
+  const [initialData, setInitialData] = useState<ServicePricingFormData | null>(null);
 
   useEffect(() => {
-    // Load JSON data (could be fetched from API)
-    setFormData(jsonData);
-    setInitialData(jsonData);
-  }, []);
+    const loadServicePricing = async () => {
+      await fetchServicePricing();
+    };
+    
+    loadServicePricing();
+  }, [fetchServicePricing]);
+
+  // Update form data when servicePricing changes
+  useEffect(() => {
+    if (servicePricing) {
+      const newFormData = convertToFormData(servicePricing);
+      setFormData(newFormData);
+      setInitialData(newFormData);
+    }
+  }, [servicePricing]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -49,12 +50,21 @@ export default function EditServicePricing() {
     router.push("/pages/servicePricing");
   };
 
-  const handleSave = () => {
-    if (JSON.stringify(formData) !== JSON.stringify(initialData)) {
-      console.log("Updated JSON data:", formData);
+  const handleSave = async () => {
+    if (servicePricing && formData !== initialData) {
+      console.log(servicePricing,formData)
+      await updateServicePricing(servicePricing._id, formData);
     }
     router.push("/pages/servicePricing");
   };
+
+  if (loading && !servicePricing) {
+    return (
+      <div className="min-h-screen ml-8 flex items-center justify-center">
+        <div className="text-gray-600">Loading service pricing...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen ml-8">
@@ -76,24 +86,23 @@ export default function EditServicePricing() {
           <div className="flex items-center space-x-3">
             <button
               onClick={handleCancel}
-              className="flex items-center justify-center gap-2 px-6 py-3  rounded-lg  text-[16px] leading-[24px] tracking-[0] bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 transition-colors"
+              className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg text-[16px] leading-[24px] tracking-[0] bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
-              className="flex items-center justify-center gap-2 px-6 py-3 bg-[#C9A040] text-gray-800 rounded-lg hover:bg-[#9e7e33] transition-colors font-semibold text-[16px] leading-[24px] tracking-[0]"
+              disabled={loading}
+              className="flex items-center justify-center gap-2 px-6 py-3 bg-[#C9A040] text-gray-800 rounded-lg hover:bg-[#9e7e33] transition-colors font-semibold text-[16px] leading-[24px] tracking-[0] disabled:opacity-50"
             >
-              Save
+              {loading ? 'Saving...' : 'Save'}
             </button>
           </div>
-        </div>{" "}
+        </div>
         <h1 className="text-[32px] font-semibold text-gray-900 mb-8">
           Service Pricing
         </h1>
       </div>
-
-      {/* Title */}
 
       {/* Form Card */}
       <div className="bg-white rounded-lg shadow-sm p-8 space-y-8">

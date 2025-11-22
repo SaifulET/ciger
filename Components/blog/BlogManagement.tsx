@@ -1,54 +1,15 @@
 'use client'
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PencilEdit02Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
-
-// Mock blog data
-const blogData = [
-  {
-    id: 1,
-    image: "https://images.unsplash.com/photo-1606665997683-23f0e1bd8f0a?w=400&h=300&fit=crop",
-    title: "Cigar is the best product",
-    description: "Discover the art of cigar smoking. From selecting the perfect blend to enjoying every flavorful puff."
-  },
-  {
-    id: 2,
-    image: "https://images.unsplash.com/photo-1606665997683-23f0e1bd8f0a?w=400&h=300&fit=crop",
-    title: "Cigar is the best product",
-    description: "Discover the art of cigar smoking. From selecting the perfect blend to enjoying every flavorful puff."
-  },
-  {
-    id: 3,
-    image: "https://images.unsplash.com/photo-1606665997683-23f0e1bd8f0a?w=400&h=300&fit=crop",
-    title: "Cigar is the best product",
-    description: "Discover the art of cigar smoking. From selecting the perfect blend to enjoying every flavorful puff."
-  }, {
-    id: 4,
-    image: "https://images.unsplash.com/photo-1606665997683-23f0e1bd8f0a?w=400&h=300&fit=crop",
-    title: "Cigar is the best product",
-    description: "Discover the art of cigar smoking. From selecting the perfect blend to enjoying every flavorful puff."
-  },
-  {
-    id: 5,
-    image: "https://images.unsplash.com/photo-1606665997683-23f0e1bd8f0a?w=400&h=300&fit=crop",
-    title: "Cigar is the best product",
-    description: "Discover the art of cigar smoking. From selecting the perfect blend to enjoying every flavorful puff."
-  },
-  {
-    id: 6,
-    image: "https://images.unsplash.com/photo-1606665997683-23f0e1bd8f0a?w=400&h=300&fit=crop",
-    title: "Cigar is the best product",
-    description: "Discover the art of cigar smoking. From selecting the perfect blend to enjoying every flavorful puff."
-  },
- 
-];
+import { useBlogStore } from '@/app/store/blogStore';
 
 interface BlogCardProps {
-  id: number;
+  id: string;
   image: string;
   title: string;
-  description: string;
+  description?: string;
 }
 
 const BlogCard: React.FC<BlogCardProps> = ({ id, image, title, description }) => {
@@ -72,7 +33,7 @@ const BlogCard: React.FC<BlogCardProps> = ({ id, image, title, description }) =>
       <div className="p-4">
         <h3 className="text-lg font-semibold mb-2">{title}</h3>
         <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-          {description}
+          {description || 'No description available'}
         </p>
         <div className="flex justify-between">
           <button 
@@ -96,6 +57,11 @@ const BlogCard: React.FC<BlogCardProps> = ({ id, image, title, description }) =>
 
 const BlogManagement: React.FC = () => {
   const router = useRouter();
+  const { blogs, fetchAllBlogs, loading } = useBlogStore();
+
+  useEffect(() => {
+    fetchAllBlogs();
+  }, [fetchAllBlogs]);
 
   const handleCreateBlog = () => {
     router.push('/pages/blogs/create');
@@ -115,17 +81,23 @@ const BlogManagement: React.FC = () => {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {blogData.map((blog) => (
-            <BlogCard
-              key={blog.id}
-              id={blog.id}
-              image={blog.image}
-              title={blog.title}
-              description={blog.description}
-            />
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex justify-center items-center py-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C9A040]"></div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {blogs.map((blog) => (
+              <BlogCard
+                key={blog._id}
+                id={blog._id}
+                image={blog.image}
+                title={blog.name}
+                description={blog.description}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

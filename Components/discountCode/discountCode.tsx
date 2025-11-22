@@ -1,63 +1,52 @@
 'use client'
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Eye, Trash2 } from 'lucide-react';
 import { PencilEdit02Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { useRouter } from 'next/navigation';
-
-interface DiscountCode {
-  id: string;
-  code: string;
-  percentage: number;
-}
-
-// Sample JSON data
-const discountCodesData: DiscountCode[] = [
-  { id: '1', code: 'ELFD0646', percentage: 5 },
-  { id: '2', code: 'SUMMER2024', percentage: 10 },
-  { id: '3', code: 'WELCOME15', percentage: 15 },
-  { id: '4', code: 'SAVE20NOW', percentage: 20 },
-  { id: '5', code: 'MEGA25', percentage: 25 },
-  { id: '6', code: 'MEGA25', percentage: 25 },
-  { id: '7', code: 'MEGA25', percentage: 25 },
-  { id: '8', code: 'MEGA25', percentage: 25 },
-  { id: '9', code: 'MEGA25', percentage: 25 },
-];
+import { useDiscountCodeStore } from '@/app/store/discountCodeStore';
 
 export default function DiscountCodePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
-  const totalPages = Math.ceil(discountCodesData.length / itemsPerPage);
+  
+  const router = useRouter();
+  const { discountCodes, loading, fetchDiscountCodes, deleteDiscountCodeById } = useDiscountCodeStore();
 
+  useEffect(() => {
+    fetchDiscountCodes();
+  }, [fetchDiscountCodes]);
+
+  const totalPages = Math.ceil(discountCodes.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentData = discountCodesData.slice(startIndex, endIndex);
-  const router= useRouter()
+  const currentData = discountCodes.slice(startIndex, endIndex);
 
   const handleCreateCode = () => {
-    // Navigate to: /pages/discountCode/create
-    console.log('Navigate to: /pages/discountCode/create');
-    router.push("/pages/discountCode/create")
-    
+    router.push("/pages/discountCode/create");
   };
 
   const handleEdit = (id: string) => {
-    // Navigate to: /pages/discountCode/edit/{id}
-    console.log(`Navigate to: /pages/discountCode/edit/${id}`);
-        router.push(`/pages/discountCode/edit/${id}`);
-
+    router.push(`/pages/discountCode/edit/${id}`);
   };
 
   const handleView = (id: string) => {
-    // Navigate to: /pages/discountCode/view/{id}
-    console.log(`Navigate to: /pages/discountCode/view/${id}`);
-    router.push(`/pages/discountCode/view/${id}`);;
+    router.push(`/pages/discountCode/view/${id}`);
   };
 
-  const handleDelete = (id: string) => {
-    console.log('Delete discount code:', id);
-    alert(`Delete discount code: ${id}`);
+  const handleDelete = async (id: string) => {
+    if (confirm('Are you sure you want to delete this discount code?')) {
+      await deleteDiscountCodeById(id);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen ml-8 flex items-center justify-center">
+        <div className="text-gray-600">Loading discount codes...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen ml-8">
@@ -87,7 +76,7 @@ export default function DiscountCodePage() {
             </thead>
             <tbody>
               {currentData.map((item, index) => (
-                <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                <tr key={item._id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 text-gray-700 text-sm">
                     {String(startIndex + index + 1).padStart(2, '0')}
                   </td>
@@ -96,21 +85,21 @@ export default function DiscountCodePage() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
                       <button
-                        onClick={() => handleEdit(item.id)}
+                        onClick={() => handleEdit(item._id)}
                         className="text-cyan-500 hover:text-cyan-600 transition-colors text-[24px]"
                         title="Edit"
                       >
                         <HugeiconsIcon icon={PencilEdit02Icon} />
                       </button>
                       <button
-                        onClick={() => handleView(item.id)}
+                        onClick={() => handleView(item._id)}
                         className="text-gray-900 hover:text-gray-950 transition-colors"
                         title="View"
                       >
                         <Eye size={24} />
                       </button>
                       <button
-                        onClick={() => handleDelete(item.id)}
+                        onClick={() => handleDelete(item._id)}
                         className="text-red-500 hover:text-red-600 transition-colors"
                         title="Delete"
                       >
@@ -126,7 +115,7 @@ export default function DiscountCodePage() {
           {/* Footer with Pagination */}
           <div className="flex justify-between items-center px-6 py-4 bg-gray-50 border-t border-gray-200">
             <p className="text-sm text-gray-600">
-              No of Results <span className="font-medium">{endIndex<discountCodesData.length?endIndex:discountCodesData.length}</span> out of <span className="font-medium">{discountCodesData.length}</span>
+              No of Results <span className="font-medium">{endIndex < discountCodes.length ? endIndex : discountCodes.length}</span> out of <span className="font-medium">{discountCodes.length}</span>
             </p>
             <div className="flex items-center gap-2">
               <button

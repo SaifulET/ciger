@@ -1,24 +1,22 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import dynamic from 'next/dynamic';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft02Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
-
-// ✅ Import React QuillJS
 import { useQuill } from 'react-quilljs';
 import 'quill/dist/quill.snow.css';
+import { useBlogStore } from '@/app/store/blogStore';
 
 export default function CreateBlog() {
   const router = useRouter();
+  const { createBlog, loading } = useBlogStore();
   const [title, setTitle] = useState('');
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
   const [description, setDescription] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Initialize Quill editor
   const { quill, quillRef } = useQuill({
     theme: 'snow',
     modules: {
@@ -34,12 +32,13 @@ export default function CreateBlog() {
     },
   });
 
-  // Update description state whenever Quill content changes
-  if (quill) {
-    quill.on('text-change', () => {
-      setDescription(quill.root.innerHTML);
-    });
-  }
+  useEffect(() => {
+    if (quill) {
+      quill.on('text-change', () => {
+        setDescription(quill.root.innerHTML);
+      });
+    }
+  }, [quill]);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -53,15 +52,38 @@ export default function CreateBlog() {
     }
   };
 
-  const handlePost = () => {
-    const blogData = {
-      title,
-      image: image?.name || null,
-      imagePreview,
-      description,
-      createdAt: new Date().toISOString(),
-    };
-    console.log('Blog Data:', blogData);
+  const handleRemoveImage = () => {
+    setImage(null);
+    setImagePreview('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handlePost = async () => {
+    if (!description) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    if (!image) {
+      alert('Please select an image');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('name', title);
+    formData.append('description', description);
+    formData.append('image', image); // Pass the actual File object
+
+    try {
+      const result = await createBlog(formData);
+      if (result.success) {
+        router.push('/pages/blogs');
+      }
+    } catch (error) {
+      console.error('Error creating blog:', error);
+    }
   };
 
   return (
@@ -87,9 +109,10 @@ export default function CreateBlog() {
             <h1 className="text-2xl font-bold">Create Blog</h1>
             <button
               onClick={handlePost}
-              className="px-6 py-2 bg-[#C9A040] font-semibold rounded-lg hover:bg-[#B89030] transition"
+              disabled={loading}
+              className="px-6 py-2 bg-[#C9A040] font-semibold rounded-lg hover:bg-[#B89030] transition disabled:opacity-50"
             >
-              Post
+              {loading ? 'Posting...' : 'Post'}
             </button>
           </div>
         </div>
@@ -98,7 +121,7 @@ export default function CreateBlog() {
         <div className="bg-white rounded-lg py-5 px-8">
           {/* Title */}
           <div className="mb-6">
-            <label className="block text-sm font-medium mb-2">Title</label>
+            <label className="block text-sm font-medium mb-2">Title *</label>
             <input
               type="text"
               value={title}
@@ -110,7 +133,7 @@ export default function CreateBlog() {
 
           {/* Image Upload */}
           <div className="mb-6">
-            <label className="block text-sm font-medium mb-2">Choose Image</label>
+            <label className="block text-sm font-medium mb-2">Choose Image *</label>
             <input
               ref={fileInputRef}
               type="file"
@@ -118,22 +141,33 @@ export default function CreateBlog() {
               onChange={handleImageSelect}
               className="hidden"
             />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="px-6 py-2 font-semibold bg-[#C9A040] rounded-lg hover:bg-[#B89030] transition"
-            >
-              Select Image
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="px-6 py-2 font-semibold bg-[#C9A040] rounded-lg hover:bg-[#B89030] transition"
+              >
+                Select Image
+              </button>
+              {image && (
+                <button
+                  onClick={handleRemoveImage}
+                  className="px-4 py-2 font-semibold bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+                >
+                  Remove Image
+                </button>
+              )}
+            </div>
             {imagePreview && (
               <div className="mt-3">
                 <img src={imagePreview} alt="Preview" className="max-w-xs rounded border" />
+                <p className="text-sm text-gray-600 mt-1">Selected: </p>
               </div>
             )}
           </div>
 
           {/* Description */}
           <div className="mb-6">
-            <label className="block text-sm font-medium mb-2">Description</label>
+            <label className="block text-sm font-medium mb-2">Description *</label>
             <div className="bg-white border border-gray-300 rounded">
               <div ref={quillRef} className="min-h-[300px]" />
             </div>

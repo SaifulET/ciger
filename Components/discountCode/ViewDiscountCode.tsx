@@ -4,65 +4,42 @@ import { ArrowLeft02Icon, PencilEdit02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-
-interface DiscountCode {
-  id:string;
- code: string;
-  description: string;
-  percentage: number;
-}
-const discountCodesData: DiscountCode[] = [
-  { id: '1', code: 'ELFD0646', percentage: 5,description:"1st one" },
-  { id: '2', code: 'SUMMER2024', percentage: 10,description:"2nd one"  },
-  { id: '3', code: 'WELCOME15', percentage: 15 ,description:"3rd one"},
-  { id: '4', code: 'SAVE20NOW', percentage: 20 ,description:"4th one"},
-  { id: '5', code: 'MEGA25', percentage: 25 ,description:"5th one"},
-  { id: '6', code: 'MEGA25', percentage: 25,description:"6th one" },
-  { id: '7', code: 'MEGA25', percentage: 25 ,description:"7th one"},
-  { id: '8', code: 'MEGA25', percentage: 25 ,description:"8th one"},
-  { id: '9', code: 'MEGA25', percentage: 25,description:"8th one" },
-];
-
-// Simulated JSON data (in real app, import or fetch this)
-
+import { useDiscountCodeStore, DiscountCode } from "@/app/store/discountCodeStore";
 
 export default function ViewDiscountCode() {
-  
- const [formData, setFormData] = useState<DiscountCode>({
-    id:"",
+  const [formData, setFormData] = useState<DiscountCode>({
+    _id: "",
     code: "",
     description: "",
     percentage: 0,
+    createdAt: "",
+    updatedAt: ""
   });
- 
 
- 
-const params=useParams()
-const id =params.id as string
-console.log(id ,typeof(id))
-  const setFormDataById = (id:string) => {
-    const discountCode =discountCodesData.find((item:DiscountCode) => item.id === id);
-    console.log(discountCode)
+  const params = useParams();
+  const id = params.id as string;
+  const { fetchDiscountCodeById, loading } = useDiscountCodeStore();
+
+  useEffect(() => {
+    const loadDiscountCode = async () => {
+      if (id) {
+        const discountCode = await fetchDiscountCodeById(id);
+        if (discountCode) {
+          setFormData(discountCode);
+        }
+      }
+    };
     
-    if (discountCode) {
-      setFormData({
-        id:discountCode.id,
-        code: discountCode.code,
-        description: discountCode.description,
-        percentage: discountCode.percentage,
-      });
-     
-    } else {
-      console.warn('Service not found with ID:', id);
-    }
-  };
-useEffect((()=>{
-    setFormDataById(id)
-    console.log(id)
-}),[id])
+    loadDiscountCode();
+  }, [id, fetchDiscountCodeById]);
 
-
- 
+  if (loading) {
+    return (
+      <div className="min-h-screen ml-8 flex items-center justify-center">
+        <div className="text-gray-600">Loading discount code...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen ml-8">
@@ -97,38 +74,38 @@ useEffect((()=>{
         </h1>
       </div>
 
-      {/* Title */}
-
       {/* Form Card */}
       <div className="bg-white rounded-lg shadow-sm p-8 space-y-8">
-        {/* Shipping Cost */}
+        {/* Discount Code */}
         <div>
           <label className="block font-semibold text-[18px] text-gray-900 mb-2">
             Discount Code
           </label>
           <input
             type="text"
-            name="Number"
+            name="code"
             value={formData.code}
             readOnly
             placeholder="Number"
             className="w-full px-4 py-4 bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-[#C9A040] outline-none"
           />
         </div>
- {/* Discount percentage */}
+        
+        {/* Discount percentage */}
         <div>
           <label className="block font-semibold text-[18px] text-gray-900 mb-2">
            Discount Percentage (%)
           </label>
           <input
             type="number"
-            name="Number"
+            name="percentage"
             value={formData.percentage}
             readOnly
             placeholder="200"
             className="w-full px-4 py-4 bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-[#C9A040] outline-none"
           />
         </div>
+        
         {/* Discount Description*/}
         <div>
           <label className="block font-semibold text-[18px] text-gray-900 mb-2">
@@ -136,20 +113,14 @@ useEffect((()=>{
           </label>
           <input
             type="text"
-            name="Description"
+            name="description"
             value={formData.description}
             readOnly
             placeholder="Text"
             className="w-full px-4 py-4 bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-[#C9A040] outline-none"
           />
         </div>
-
-       
       </div>
     </div>
   );
 }
-
-
-
-

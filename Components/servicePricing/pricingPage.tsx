@@ -3,35 +3,34 @@ import { PencilEdit02Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
+import { useServicePricingStore, convertToFormData } from '@/app/store/servicePricing';
 
 export default function ServicePricing() {
   const router = useRouter();
+  const { servicePricing, loading, fetchServicePricing } = useServicePricingStore();
 
-  // Local state to hold fetched data
-  const [serviceData, setServiceData] = useState({
-    shippingCost: null as number | null,
+  // Convert backend data to frontend form data
+  const formData = servicePricing ? convertToFormData(servicePricing) : {
+    shippingCost: 0,
     advertisingText: '',
-    minimumFreeShippingAmount: 0,
-  });
-
-  // Simulated JSON data (in real use, fetch from API or import JSON file)
-  const jsonData = {
-    shippingCost: 50,
-    advertisingText: 'Free shipping for orders above $200!',
-    minimumFreeShippingAmount: 200,
+    minimumFreeShippingAmount: 0
   };
 
-  // Load JSON data into state
   useEffect(() => {
-    // Example: simulate API call delay
-    setTimeout(() => {
-      setServiceData(jsonData);
-    }, 300);
-  }, []);
+    fetchServicePricing();
+  }, [fetchServicePricing]);
 
   const handleEdit = () => {
     router.push('/pages/servicePricing/edit');
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen ml-8 flex items-center justify-center">
+        <div className="text-gray-600">Loading service pricing...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen ml-8">
@@ -59,7 +58,7 @@ export default function ServicePricing() {
             </label>
             <input
               type="text"
-              value={serviceData.shippingCost ?? ''}
+              value={formData.shippingCost}
               placeholder="Number"
               readOnly
               className="w-full px-4 py-4 bg-gray-50 border-0 rounded-lg text-gray-500 placeholder-gray-400"
@@ -76,7 +75,7 @@ export default function ServicePricing() {
             </label>
             <input
               type="text"
-              value={serviceData.advertisingText}
+              value={formData.advertisingText}
               placeholder="Text"
               readOnly
               className="w-full px-4 py-4 bg-gray-50 border-0 rounded-lg text-gray-500 placeholder-gray-400"
@@ -90,7 +89,7 @@ export default function ServicePricing() {
             </label>
             <input
               type="text"
-              value={serviceData.minimumFreeShippingAmount ?? ''}
+              value={formData.minimumFreeShippingAmount}
               placeholder="200"
               readOnly
               className="w-full px-4 py-4 bg-gray-50 border-0 rounded-lg text-gray-500 placeholder-gray-400"

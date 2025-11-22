@@ -5,75 +5,47 @@ import { ArrowLeft02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-
-interface DiscountCode {
-  id: string;
-  code: string;
-  description: string;
-  percentage: number;
-}
-
-const discountCodesData: DiscountCode[] = [
-  { id: '1', code: 'ELFD0646', percentage: 5, description: "1st one" },
-  { id: '2', code: 'SUMMER2024', percentage: 10, description: "2nd one" },
-  { id: '3', code: 'WELCOME15', percentage: 15, description: "3rd one" },
-  { id: '4', code: 'SAVE20NOW', percentage: 20, description: "4th one" },
-  { id: '5', code: 'MEGA25', percentage: 25, description: "5th one" },
-  { id: '6', code: 'MEGA25', percentage: 25, description: "6th one" },
-  { id: '7', code: 'MEGA25', percentage: 25, description: "7th one" },
-  { id: '8', code: 'MEGA25', percentage: 25, description: "8th one" },
-  { id: '9', code: 'MEGA25', percentage: 25, description: "8th one" },
-];
+import { useDiscountCodeStore, DiscountCode } from "@/app/store/discountCodeStore";
 
 export default function EditDiscountCode() {
   const router = useRouter();
   const [formData, setFormData] = useState<DiscountCode>({
-    id: "",
+    _id: "",
     code: "",
     description: "",
     percentage: 0,
+    createdAt: "",
+    updatedAt: ""
   });
   const [initialData, setInitialData] = useState<DiscountCode>({
-    id: "",
+    _id: "",
     code: "",
     description: "",
     percentage: 0,
+    createdAt: "",
+    updatedAt: ""
   });
 
   const params = useParams();
   const id = params.id as string;
-
-  const setFormDataById = (id: string) => {
-    const discountCode = discountCodesData.find((item: DiscountCode) => item.id === id);
-    console.log("Found discount code:", discountCode);
-    
-    if (discountCode) {
-      setFormData({
-        id: discountCode.id,
-        code: discountCode.code,
-        description: discountCode.description,
-        percentage: discountCode.percentage,
-      });
-      setInitialData({
-        id: discountCode.id,
-        code: discountCode.code,
-        description: discountCode.description,
-        percentage: discountCode.percentage,
-      });
-    } else {
-      console.warn('Service not found with ID:', id);
-    }
-  };
+  const { fetchDiscountCodeById, updateDiscountCodeById, loading } = useDiscountCodeStore();
 
   useEffect(() => {
-    if (id) {
-      setFormDataById(id);
-    }
-  }, [id]);
+    const loadDiscountCode = async () => {
+      if (id) {
+        const discountCode = await fetchDiscountCodeById(id);
+        if (discountCode) {
+          setFormData(discountCode);
+          setInitialData(discountCode);
+        }
+      }
+    };
+    
+    loadDiscountCode();
+  }, [id, fetchDiscountCodeById]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    console.log("Changing field:", name, "to:", value); // Debug log
     
     setFormData((prev) => ({
       ...prev,
@@ -85,12 +57,26 @@ export default function EditDiscountCode() {
     router.push("/pages/discountCode");
   };
 
-  const handleSave = () => {
-    if (JSON.stringify(formData) !== JSON.stringify(initialData)) {
-      console.log("Updated JSON data:", formData);
+  const handleSave = async () => {
+    if (formData !== initialData) {
+      await updateDiscountCodeById(id, {
+        code: formData.code,
+        percentage: formData.percentage,
+        description: formData.description
+      });
     }
-    router.push(`/pages/discountCode/view/${id}`);
+    router.push(`/pages/discountCode`);
   };
+
+
+
+  if (loading) {
+    return (
+      <div className="min-h-screen ml-8 flex items-center justify-center">
+        <div className="text-gray-600">Loading discount code...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen ml-8">
@@ -138,27 +124,29 @@ export default function EditDiscountCode() {
           </label>
           <input
             type="text"
-            name="code" // Changed from "Number" to "code"
+            name="code"
             value={formData.code}
             onChange={handleChange}
             placeholder="Enter discount code"
             className="w-full px-4 py-4 bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-[#C9A040] outline-none"
           />
         </div>
- {/* Discount Percentage */}
+        
+        {/* Discount Percentage */}
         <div>
           <label className="block font-semibold text-[18px] text-gray-900 mb-2">
             Discount Percentage (%)
           </label>
           <input
             type="number"
-            name="percentage" // Changed from "Number" to "percentage"
+            name="percentage"
             value={formData.percentage}
             onChange={handleChange}
             placeholder="Enter percentage"
             className="w-full px-4 py-4 bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-[#C9A040] outline-none"
           />
         </div>
+        
         {/* Discount Description */}
         <div>
           <label className="block font-semibold text-[18px] text-gray-900 mb-2">
@@ -166,15 +154,13 @@ export default function EditDiscountCode() {
           </label>
           <input
             type="text"
-            name="description" // Changed from "Description" to "description"
+            name="description"
             value={formData.description}
             onChange={handleChange}
             placeholder="Enter description"
             className="w-full px-4 py-4 bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-[#C9A040] outline-none"
           />
         </div>
-
-       
       </div>
     </div>
   );
