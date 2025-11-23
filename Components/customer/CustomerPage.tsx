@@ -1,40 +1,26 @@
 'use client'
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Search, Eye } from 'lucide-react';
 import Link from 'next/link';
-
-interface Customer {
-  id: number;
-  name: string;
-  email: string;
-  mobile: string;
-}
-
-// Sample customer data
-const customersData: Customer[] = [
-  { id: 1, name: "Guy Hawkins", email: "example@gmail.com", mobile: "878954529" },
-  { id: 2, name: "Guy Hawkins", email: "example@gmail.com", mobile: "878954529" },
-  { id: 3, name: "Jane Cooper", email: "jane.cooper@gmail.com", mobile: "878954530" },
-  { id: 4, name: "Wade Warren", email: "wade.warren@gmail.com", mobile: "878954531" },
-  { id: 5, name: "Esther Howard", email: "esther.howard@gmail.com", mobile: "878954532" },
-  { id: 6, name: "Cameron Williamson", email: "cameron.w@gmail.com", mobile: "878954533" },
-  { id: 7, name: "Brooklyn Simmons", email: "brooklyn.s@gmail.com", mobile: "878954534" },
-  { id: 8, name: "Savannah Nguyen", email: "savannah.n@gmail.com", mobile: "878954535" },
-  { id: 9, name: "Leslie Alexander", email: "leslie.a@gmail.com", mobile: "878954536" },
-  { id: 10, name: "Jenny Wilson", email: "jenny.w@gmail.com", mobile: "878954537" },
-];
+import { useCustomerStore } from '@/app/store/useCustomerStore';
 
 export default function CustomerManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
+  const { customers, loading, error, fetchCustomers } = useCustomerStore();
+
+  useEffect(() => {
+    fetchCustomers();
+  }, [fetchCustomers]);
+
   // Filter customers based on search query
   const filteredCustomers = useMemo(() => {
-    return customersData.filter(customer =>
-      customer.name.toLowerCase().includes(searchQuery.toLowerCase())
+    return customers.filter(customer =>
+      customer.email.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [searchQuery]);
+  }, [searchQuery, customers]);
 
   // Calculate pagination
   const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage);
@@ -55,8 +41,24 @@ export default function CustomerManagement() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen ml-8 text-gray-800 flex items-center justify-center">
+        <div className="text-lg">Loading customers...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen ml-8 text-gray-800 flex items-center justify-center">
+        <div className="text-lg text-red-500">Error: {error}</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen   ml-8">
+    <div className="min-h-screen ml-8 text-gray-800">
       <div className="">
         {/* Header */}
         <div className="flex justify-between items-center mb-8 px-8 py-4 bg-white rounded-lg">
@@ -81,24 +83,34 @@ export default function CustomerManagement() {
             <thead>
               <tr className="bg-[#E6D3A7]">
                 <th className="px-6 py-4 text-left text-gray-900 font-semibold">No</th>
-                <th className="px-6 py-4 text-left text-gray-900 font-semibold">Customer Name</th>
-                <th className="px-6 py-4 text-left text-gray-900 font-semibold">Email</th>
-                <th className="px-6 py-4 text-left text-gray-900 font-semibold">Mobile</th>
+                <th className="px-6 py-4 text-left text-gray-900 font-semibold">Customer Email</th>
+                <th className="px-6 py-4 text-left text-gray-900 font-semibold">Member Since</th>
+                <th className="px-6 py-4 text-left text-gray-900 font-semibold">Status</th>
                 <th className="px-6 py-4 text-left text-gray-900 font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white">
               {currentCustomers.map((customer, index) => (
-                <tr key={customer.id} className=" ">
+                <tr key={customer._id} className=" ">
                   <td className="px-6 py-4 text-gray-900">{startIndex + index + 1}</td>
-                  <td className="px-6 py-4 text-gray-900">{customer.name}</td>
                   <td className="px-6 py-4 text-gray-900">{customer.email}</td>
-                  <td className="px-6 py-4 text-gray-900">{customer.mobile}</td>
+                  <td className="px-6 py-4 text-gray-900">
+                    {new Date(customer.createdAt).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 text-gray-900">
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      customer.isSignin 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {customer.isSignin ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
                   <td className="px-6 py-4">
-                    <Link href="/pages/customers/234">
-                    <button className="text-gray-600 text-right  pl-5 hover:text-gray-900 transition-colors">
-                      <Eye className="w-5 h-5" />
-                    </button>
+                    <Link href={`/pages/customers/${customer._id}`}>
+                      <button className="text-gray-600 text-right pl-5 hover:text-gray-900 transition-colors">
+                        <Eye className="w-5 h-5" />
+                      </button>
                     </Link>
                   </td>
                 </tr>
@@ -110,7 +122,7 @@ export default function CustomerManagement() {
         {/* Footer with Results Count and Pagination */}
         <div className="mt-6 flex justify-between items-center">
           <p className="text-gray-600">
-            No of Results {filteredCustomers.length} out of {customersData.length}
+            No of Results {filteredCustomers.length} out of {customers.length}
           </p>
           
           {/* Pagination */}

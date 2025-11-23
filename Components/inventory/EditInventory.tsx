@@ -313,7 +313,7 @@ const InventoryEditItem = () => {
   }
 
   return (
-    <div className="min-h-screen ml-10">
+    <div className="min-h-screen ml-10 text-gray-800">
       <div>
         {/* Header */}
         <div className="flex items-center justify-between mb-8 py-6 px-4 rounded-lg bg-white">

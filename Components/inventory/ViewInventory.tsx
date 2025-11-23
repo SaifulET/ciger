@@ -97,7 +97,7 @@ const InventoryViewItem = () => {
 
   if (!currentProduct) {
     return (
-      <div className="min-h-screen ml-10 flex items-center justify-center">
+      <div className="min-h-screen ml-10 flex items-center justify-center text-gray-800">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-800 mb-4">Product Not Found</h1>
           <p className="text-gray-600">The requested product could not be found.</p>
@@ -110,7 +110,7 @@ const InventoryViewItem = () => {
   }
 
   return (
-    <div className="min-h-screen ml-10">
+    <div className="min-h-screen ml-10 text-gray-800">
       {/* Header */}
       <div className="flex items-center justify-between mb-8 py-6 rounded-lg bg-white">
         <div className="flex items-center gap-3">
@@ -149,7 +149,7 @@ const InventoryViewItem = () => {
       )}
 
       {/* Details */}
-      <div className="bg-white rounded-lg p-6">
+      <div className="bg-white rounded-lg p-6 text-gray-800">
         <h1 className="text-3xl font-bold mb-8 text-gray-900">Product Details</h1>
 
         {/* Product Name */}

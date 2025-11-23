@@ -198,7 +198,7 @@ export default function EditBlog() {
   }
 
   return (
-    <div className="ml-16">
+    <div className="ml-16 text-gray-800">
       <div>
         {/* Header Section */}
         <div className="bg-white mb-6 shadow-sm px-8 py-6 rounded-lg">

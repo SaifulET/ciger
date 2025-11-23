@@ -92,7 +92,7 @@ export default function CreateBlog() {
   };
 
   return (
-    <div className="min-h-screen ml-16">
+    <div className="min-h-screen ml-16 text-gray-800">
       <div>
         {/* Header Section */}
         <div className="bg-white mb-8 rounded-lg shadow-sm px-8 pt-5 pb-3">

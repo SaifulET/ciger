@@ -2,7 +2,7 @@
 import React from "react";
 import { Check } from "lucide-react";
 
-// Type definitions
+// Type definitions for converted data (matching the CustomerManagement component)
 interface OrderItem {
   id: number;
   image: string;
@@ -17,6 +17,12 @@ interface OrderData {
   orderId: string;
   trackingNo: string;
   placedOn: string;
+  contact: {
+    name: string;
+    email: string;
+    phone: string;
+    address: string;
+  };
   items: OrderItem[];
   tax: { label: string; amount: number };
   discount: { label: string; amount: number };
@@ -25,7 +31,7 @@ interface OrderData {
   payment: { status: string; amount: number };
 }
 
-type OrderStatus = "canceled" | "delivered" | "shipped" | "processing";
+type OrderStatus = "cancelled" | "delivered" | "shipped" | "processing" | "refunded";
 
 interface StatusConfig {
   bg: string;
@@ -39,7 +45,6 @@ interface Props {
   orderStatus: OrderStatus;
   statusConfig: Record<OrderStatus, StatusConfig>;
   onDownload?: () => void;
-  
 }
 
 const OrderSummary: React.FC<Props> = ({
@@ -67,10 +72,10 @@ const OrderSummary: React.FC<Props> = ({
             <span
               className={`w-1.5 h-1.5 rounded-full ${statusConfig[orderStatus].dotColor}`}
             ></span>
-            {orderStatus === "canceled" ? "Canceled " : orderStatus}
+            {orderStatus === "cancelled" ? "Cancelled" : orderStatus}
           </span>
           <p className="font-semibold text-[16px] leading-[24px] tracking-[0] text-gray-900">
-            Tracking no: {orderData.trackingNo}
+            Tracking no: {orderData.trackingNo || "Not assigned"}
           </p>
         </div>
       </div>
@@ -174,6 +179,14 @@ const OrderSummary: React.FC<Props> = ({
             ${orderData.subTotal.toFixed(2)}
           </span>
         </div>
+        <div className="flex justify-between text-sm font-medium pt-2 border-t border-gray-200">
+          <span className="font-semibold text-[16px] leading-[24px] tracking-[0] text-gray-900">
+            Total
+          </span>
+          <span className="text-gray-900 w-20 text-right font-semibold text-[16px] leading-[24px] tracking-[0]">
+            ${orderData.payment.amount.toFixed(2)}
+          </span>
+        </div>
       </div>
 
       {/* 💳 Payment Section */}
@@ -183,7 +196,9 @@ const OrderSummary: React.FC<Props> = ({
           <div className="bg-white p-4 border border-gray-700 rounded-lg">
             <div className="flex items-center justify-between pb-4">
               <span className="text-sm text-gray-600">{orderData.payment.status}</span>
-              <Check className="w-6 h-6 text-white p-1 rounded-full bg-green-500" />
+              {(orderData.payment.status === "Paid" || orderData.payment.status === "Refunded") && (
+                <Check className="w-6 h-6 text-white p-1 rounded-full bg-green-500" />
+              )}
             </div>
             <div className="flex items-center justify-between ">
               <span className="text-sm text-gray-600">Amount</span>
@@ -196,15 +211,14 @@ const OrderSummary: React.FC<Props> = ({
       </div>
 
       {/* 📥 Download Button */}
-      {onDownload &&(
-         <button
-        onClick={onDownload}
-        className="w-full mt-6 py-3 bg-white border border-gray-300 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors"
-      >
-        <span className="text-sm font-medium">Download Invoice</span>
-      </button>
+      {onDownload && (
+        <button
+          onClick={onDownload}
+          className="w-full mt-6 py-3 bg-white border border-gray-300 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors"
+        >
+          <span className="text-sm font-medium">Download Invoice</span>
+        </button>
       )}
-     
     </div>
   );
 };

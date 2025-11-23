@@ -74,7 +74,7 @@ const BrandCreate: React.FC = () => {
   }, [imagePreview]);
 
   return (
-    <div className="min-h-screen ml-8">
+    <div className="min-h-screen ml-8 text-gray-800">
       <div className="">
         <div >
           <div className=" bg-white px-8 py-6 mb-8">

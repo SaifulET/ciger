@@ -20,7 +20,7 @@ const SignInPage: NextPage = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (user.length>0) {
-      router.push("/pages/dashboard");
+      // router.push("/pages/dashboard");
     }
   }, [user, router]);
 
@@ -38,6 +38,7 @@ const SignInPage: NextPage = () => {
 
     try {
       const res = await UserLoginRequest(email, password);
+      
 
       if (res.status === "success") {
         setErrorMessage("");
@@ -50,6 +51,7 @@ const SignInPage: NextPage = () => {
       console.error("Login error:", error);
     } finally {
       setIsLoading(false);
+      router.push("/pages/dashboard")
     }
   };
 

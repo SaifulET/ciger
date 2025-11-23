@@ -24,7 +24,7 @@ const BlogCard: React.FC<BlogCardProps> = ({ id, image, title, description }) =>
   };
 
   return (
-    <div className="bg-white rounded-lg overflow-hidden shadow-md w-[444px] ">
+    <div className="bg-white rounded-lg overflow-hidden shadow-md w-[444px] text-gray-800">
       <img 
         src={image} 
         alt={title}
@@ -75,7 +75,7 @@ const BlogManagement: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen  ml-8 ">
+    <div className="min-h-screen  ml-8 text-gray-800">
       <div className="">
         <div className="flex justify-between items-center mb-8 px-6 py-7 rounded-lg bg-white">
           <h1 className="font-bold text-[40px] leading-[48px] tracking-[0]">Blog Management</h1>

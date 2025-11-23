@@ -124,7 +124,7 @@ const [originalBrand, setOriginalBrand] = useState<Brand | null>(null);  const [
   }
 
   return (
-    <div className="min-h-screen ml-8 ">
+    <div className="min-h-screen ml-8 text-gray-800">
       <div className="px-8 py-6">
         <div className="">
           <div className="bg-white  px-8 py-4 rounded-lg mb-8">

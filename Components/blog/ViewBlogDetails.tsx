@@ -34,7 +34,7 @@ export default function BlogDetails() {
   }
 
   return (
-    <div className="min-h-screen ml-16">
+    <div className="min-h-screen ml-16 text-gray-800">
       {/* Header */}
       <div className="bg-white  px-4 py-4 rounded-lg">
         <div className=" flex items-center justify-between">

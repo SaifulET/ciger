@@ -176,7 +176,7 @@ const InventoryAddItem = () => {
   };
 
   return (
-    <div className="min-h-screen ml-10">
+    <div className="min-h-screen ml-10 text-gray-800">
       <div className="">
         {/* Header */}
         <div className="flex items-center justify-between mb-8 py-6 px-6 rounded-lg bg-white">
@@ -248,12 +248,12 @@ const InventoryAddItem = () => {
                 <ChevronDown className="w-5 h-5" />
               </button>
               {openDropdown === 'category' && (
-                <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border text-gray-800 border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                   {categories.map(cat => (
                     <button
                       key={cat}
                       onClick={() => handleCategorySelect(cat)}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-100 transition"
+                      className=" w-full px-4 py-2 text-left hover:bg-gray-100 transition"
                     >
                       {cat}
                     </button>
@@ -311,7 +311,7 @@ const InventoryAddItem = () => {
                 <ChevronDown className="w-5 h-5" />
               </button>
               {openDropdown === 'brand' && (
-                <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto text-gray-800">
                   {brands.length > 0 ? (
                     brands.map(brand => (
                       <button
@@ -342,7 +342,7 @@ const InventoryAddItem = () => {
                 value={formData.productQuantity}
                 onChange={handleInputChange}
                 placeholder="Enter Quantity"
-                className="w-full px-4 py-3 bg-gray-100 rounded-lg focus:ring-2 focus:ring-[#C9A040]"
+                className="w-full px-4 py-3 text-gray-800 bg-gray-100 rounded-lg focus:ring-2 focus:ring-[#C9A040]"
               />
             </div>
 
@@ -356,7 +356,7 @@ const InventoryAddItem = () => {
                 value={formData.productStock}
                 onChange={handleInputChange}
                 placeholder="Enter the Stock"
-                className="w-full px-4 py-3 bg-gray-100 rounded-lg focus:ring-2 focus:ring-[#C9A040]"
+                className="w-full px-4 py-3 text-gray-800 bg-gray-100 rounded-lg focus:ring-2 focus:ring-[#C9A040]"
               />
             </div>
           </div>
@@ -373,7 +373,7 @@ const InventoryAddItem = () => {
                 value={formData.productPrice}
                 onChange={handleInputChange}
                 placeholder="Enter price"
-                className="w-full px-4 py-3 bg-gray-100 rounded-lg focus:ring-2 focus:ring-[#C9A040]"
+                className="w-full px-4 py-3 text-gray-800 bg-gray-100 rounded-lg focus:ring-2 focus:ring-[#C9A040]"
               />
             </div>
             <div>
@@ -386,7 +386,7 @@ const InventoryAddItem = () => {
                 value={formData.productSalePrice}
                 onChange={handleInputChange}
                 placeholder="Enter discount percentage"
-                className="w-full px-4 py-3 bg-gray-100 rounded-lg focus:ring-2 focus:ring-[#C9A040]"
+                className="w-full px-4 py-3 text-gray-800 bg-gray-100 rounded-lg focus:ring-2 focus:ring-[#C9A040]"
               />
             </div>
           </div>
@@ -425,7 +425,7 @@ const InventoryAddItem = () => {
             <label className="block text-sm font-semibold text-gray-900 mb-2">
               Product Description <span className="text-red-500">*</span>
             </label>
-            <div className="h-64 border border-gray-300 rounded-lg" style={{ direction: 'ltr' }}>
+            <div className="h-64 border text-gray-800 border-gray-300 rounded-lg" style={{ direction: 'ltr' }}>
               <div ref={quillRef} />
             </div>
           </div>

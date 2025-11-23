@@ -1,11 +1,13 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
-import OrderSummary from "@/Components/order/OrderSummary"; // Import your existing OrderSummary component
+import OrderSummary from "@/Components/order/OrderSummary";
 import Link from "next/link";
+import { useCustomerStore } from '@/app/store/useCustomerStore';
+import { useParams } from "next/navigation";
 
 // Types
-type OrderStatus = "canceled" | "delivered" | "shipped" | "processing";
+type OrderStatus = "cancelled" | "delivered" | "shipped" | "processing" | "refunded";
 
 interface StatusConfig {
   bg: string;
@@ -19,6 +21,38 @@ interface ContactDetails {
   email: string;
   phone: string;
   address: string;
+}
+
+interface CartItem {
+  _id: string;
+  image: string;
+  brand: string;
+  product: string;
+  unitPrice: number;
+  quantity: number;
+  total: number;
+}
+
+interface ApiOrder {
+  _id: string;
+  name: string;
+  address: string;
+  email: string;
+  phone: string;
+  orderId: string;
+  trackingNo: string;
+  state: OrderStatus;
+  userId: string;
+  isNextUsePayment: boolean;
+  carts: CartItem[];
+  date: string;
+  tax: string;
+  subTotal: number;
+  total: number;
+  shippingCost: number;
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
 }
 
 interface OrderItem {
@@ -44,202 +78,9 @@ interface OrderData {
   payment: { status: string; amount: number };
 }
 
-interface CustomerData {
-  contactDetails: ContactDetails;
-  orders: Array<OrderData & { status: OrderStatus }>;
-}
-
-// ================= SAMPLE DATA =================
-const customerData: CustomerData = {
-  contactDetails: {
-    name: "John Doe",
-    email: "example@gmail.com",
-    phone: "+8801XXXXXXX",
-    address: "43, Moskhali, 1234, Dhaka, Bangladesh",
-  },
-  orders: [
-    {
-      orderId: "10234",
-      trackingNo: "62862616",
-      placedOn: "Sep 22, 2025",
-      status: "delivered",
-      contact: {
-        name: "John Doe",
-        email: "example@gmail.com",
-        phone: "+8801XXXXXXX",
-        address: "43, Moskhali, 1234, Dhaka, Bangladesh",
-      },
-      items: [
-        {
-          id: 1,
-          image: "/api/placeholder/50/50",
-          brand: "Brand Name",
-          product: "Good Stuff Red Pipe Tobacco - 16 oz. Bag",
-          unitPrice: 126.66,
-          quantity: 2,
-          total: 253.32,
-        },
-        {
-          id: 2,
-          image: "/api/placeholder/50/50",
-          brand: "Brand Name",
-          product: "Good Stuff Red Pipe Tobacco - 16 oz. Bag",
-          unitPrice: 126.66,
-          quantity: 2,
-          total: 253.32,
-        },
-        {
-          id: 3,
-          image: "/api/placeholder/50/50",
-          brand: "Brand Name",
-          product: "Good Stuff Red Pipe Tobacco - 16 oz. Bag",
-          unitPrice: 126.66,
-          quantity: 1,
-          total: 126.66,
-        },
-      ],
-      tax: { label: "5%", amount: 31.66 },
-      discount: { label: "5%", amount: 15.83 },
-      shippingCost: 15.0,
-      subTotal: 633.3,
-      payment: { status: "Paid", amount: 663.13 },
-    },
-    {
-      orderId: "10235",
-      trackingNo: "62862617",
-      placedOn: "Sep 25, 2025",
-      status: "processing",
-      contact: {
-        name: "John Doe",
-        email: "example@gmail.com",
-        phone: "+8801XXXXXXX",
-        address: "43, Moskhali, 1234, Dhaka, Bangladesh",
-      },
-      items: [
-        {
-          id: 1,
-          image: "/api/placeholder/50/50",
-          brand: "Brand Name",
-          product: "Premium Quality Tobacco Mix - 8 oz. Pack",
-          unitPrice: 89.99,
-          quantity: 1,
-          total: 89.99,
-        },
-        {
-          id: 2,
-          image: "/api/placeholder/50/50",
-          brand: "Brand Name",
-          product: "Classic Pipe Tobacco - 12 oz. Bag",
-          unitPrice: 110.5,
-          quantity: 3,
-          total: 331.5,
-        },
-      ],
-      tax: { label: "5%", amount: 21.07 },
-      discount: { label: "5%", amount: 10.54 },
-      shippingCost: 12.0,
-      subTotal: 421.49,
-      payment: { status: "Pending", amount: 444.02 },
-    },
-    {
-      orderId: "10236",
-      trackingNo: "62862618",
-      placedOn: "Oct 01, 2025",
-      status: "shipped",
-      contact: {
-        name: "John Doe",
-        email: "example@gmail.com",
-        phone: "+8801XXXXXXX",
-        address: "43, Moskhali, 1234, Dhaka, Bangladesh",
-      },
-      items: [
-        {
-          id: 1,
-          image: "/api/placeholder/50/50",
-          brand: "Brand Name",
-          product: "Smooth Blend Tobacco - 20 oz. Bag",
-          unitPrice: 145.0,
-          quantity: 2,
-          total: 290.0,
-        },
-      ],
-      tax: { label: "5%", amount: 14.5 },
-      discount: { label: "5%", amount: 7.25 },
-      shippingCost: 18.0,
-      subTotal: 290.0,
-      payment: { status: "Paid", amount: 315.25 },
-    },
-    {
-      orderId: "10237",
-      trackingNo: "62862619",
-      placedOn: "Oct 05, 2025",
-      status: "canceled",
-      contact: {
-        name: "John Doe",
-        email: "example@gmail.com",
-        phone: "+8801XXXXXXX",
-        address: "43, Moskhali, 1234, Dhaka, Bangladesh",
-      },
-      items: [
-        {
-          id: 1,
-          image: "/api/placeholder/50/50",
-          brand: "Brand Name",
-          product: "Aromatic Tobacco Blend - 10 oz. Pack",
-          unitPrice: 95.0,
-          quantity: 1,
-          total: 95.0,
-        },
-        {
-          id: 2,
-          image: "/api/placeholder/50/50",
-          brand: "Brand Name",
-          product: "Fine Cut Tobacco - 14 oz. Bag",
-          unitPrice: 118.75,
-          quantity: 2,
-          total: 237.5,
-        },
-      ],
-      tax: { label: "5%", amount: 16.63 },
-      discount: { label: "5%", amount: 8.31 },
-      shippingCost: 10.0,
-      subTotal: 332.5,
-      payment: { status: "Refunded", amount: 350.82 },
-    },
-    {
-      orderId: "10238",
-      trackingNo: "62862620",
-      placedOn: "Oct 10, 2025",
-      status: "processing",
-      contact: {
-        name: "John Doe",
-        email: "example@gmail.com",
-        phone: "+8801XXXXXXX",
-        address: "43, Moskhali, 1234, Dhaka, Bangladesh",
-      },
-      items: [
-        {
-          id: 1,
-          image: "/api/placeholder/50/50",
-          brand: "Brand Name",
-          product: "Royal Blend Pipe Tobacco - 18 oz. Bag",
-          unitPrice: 135.0,
-          quantity: 4,
-          total: 540.0,
-        },
-      ],
-      tax: { label: "5%", amount: 27.0 },
-      discount: { label: "5%", amount: 13.5 },
-      shippingCost: 20.0,
-      subTotal: 540.0,
-      payment: { status: "Pending", amount: 573.5 },
-    },
-  ],
-};
-
 // Status Configuration
 const statusConfig: Record<OrderStatus, StatusConfig> = {
-  canceled: {
+  cancelled: {
     bg: "bg-[#FCEAEA]",
     text: "text-[#DD2C2C]",
     border: "border-red-200",
@@ -263,27 +104,138 @@ const statusConfig: Record<OrderStatus, StatusConfig> = {
     border: "border-yellow-200",
     dotColor: "bg-[#B27B0E]",
   },
+  refunded: {
+    bg: "bg-[#FCEAEA]",
+    text: "text-[#DD2C2C]",
+    border: "border-red-200",
+    dotColor: "bg-[#DD2C2C]",
+  },
 };
 
-// ================= PAGE COMPONENT =================
 const CustomerManagement: React.FC = () => {
+  // Get userId from URL params
+  const params = useParams();
+  console.log(params)
+  const userId = params.di as string;
+  console.log(userId)
+  
   // State for filters
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("All Orders");
 
+  const { customerOrders, ordersLoading, ordersError, fetchCustomerOrders } = useCustomerStore();
+
+  console.log("User ID from params:", userId);
+
+  useEffect(() => {
+    if (userId) {
+      fetchCustomerOrders(userId);
+    }
+  }, [userId, fetchCustomerOrders]);
+
+  // Get contact details from first order or use default
+  const contactDetails: ContactDetails = customerOrders.length > 0 
+    ? {
+        name: customerOrders[0].name,
+        email: customerOrders[0].email,
+        phone: customerOrders[0].phone,
+        address: customerOrders[0].address,
+      }
+    : {
+        name: "N/A",
+        email: "N/A",
+        phone: "N/A",
+        address: "N/A",
+      };
+
   // Filter orders based on search and status
-  const filteredOrders = customerData.orders.filter((order) => {
+  const filteredOrders = customerOrders.filter((order: ApiOrder) => {
     const matchesSearch = order.orderId
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
     const matchesStatus =
       selectedStatus === "All Orders" ||
-      order.status === selectedStatus.toLowerCase();
+      order.state === selectedStatus.toLowerCase();
     return matchesSearch && matchesStatus;
   });
 
+  // Calculate tax amount from percentage string
+  const calculateTaxAmount = (taxString: string, subTotal: number): number => {
+    const taxPercentage = parseFloat(taxString.replace('%', '')) || 0;
+    return (subTotal * taxPercentage) / 100;
+  };
+
+  // Calculate discount (you can modify this based on your business logic)
+  const calculateDiscount = (subTotal: number): number => {
+    // Default 5% discount for example - adjust based on your needs
+    return subTotal * 0.05;
+  };
+
+  // Convert API order to component order format
+  const convertToOrderData = (order: ApiOrder): OrderData & { status: OrderStatus } => {
+    const taxAmount = calculateTaxAmount(order.tax, order.subTotal);
+    const discountAmount = calculateDiscount(order.subTotal);
+
+    return {
+      orderId: order.orderId,
+      trackingNo: order.trackingNo,
+      placedOn: new Date(order.date).toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      }),
+      status: order.state,
+      contact: {
+        name: order.name,
+        email: order.email,
+        phone: order.phone,
+        address: order.address,
+      },
+      items: order.carts.map((cart: CartItem, index: number) => ({
+        id: index + 1,
+        image: cart.image || "/api/placeholder/50/50",
+        brand: cart.brand || "Brand Name",
+        product: cart.product || "Product Name",
+        unitPrice: cart.unitPrice || 0,
+        quantity: cart.quantity || 1,
+        total: cart.total || 0,
+      })),
+      tax: { 
+        label: order.tax || "0%", 
+        amount: taxAmount
+      },
+      discount: { 
+        label: "5%", 
+        amount: discountAmount
+      },
+      shippingCost: order.shippingCost || 0,
+      subTotal: order.subTotal || 0,
+      payment: { 
+        status: order.state === "refunded" ? "Refunded" : 
+                order.state === "delivered" ? "Paid" : "Pending", 
+        amount: order.total || 0 
+      },
+    };
+  };
+
+  if (ordersLoading) {
+    return (
+      <div className="min-h-screen ml-8 text-gray-800 flex items-center justify-center">
+        <div className="text-lg">Loading orders...</div>
+      </div>
+    );
+  }
+
+  if (ordersError) {
+    return (
+      <div className="min-h-screen ml-8 text-gray-800 flex items-center justify-center">
+        <div className="text-lg text-red-500">Error: {ordersError}</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen ml-8">
+    <div className="min-h-screen ml-8 text-gray-800">
       <div className=" ">
         {/* Breadcrumb Navigation */}
         <div className="bg-white px-8 py-2 pt-4 rounded-lg mb-4">
@@ -323,13 +275,14 @@ const CustomerManagement: React.FC = () => {
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E6D3A7] bg-[#F5F5F5]capitalize"
+              className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E6D3A7] bg-[#F5F5F5] capitalize"
             >
               <option>All Orders</option>
               <option>Processing</option>
               <option>Delivered</option>
-              <option>Canceled</option>
+              <option>Cancelled</option>
               <option>Shipped</option>
+              <option>Refunded</option>
             </select>
           </div>
         </div>
@@ -342,42 +295,30 @@ const CustomerManagement: React.FC = () => {
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="text-xs text-gray-500 mb-1 block">Name</label>
-              <p className="text-sm text-gray-900">
-                {customerData.contactDetails.name}
-              </p>
+              <p className="text-sm text-gray-900">{contactDetails.name}</p>
             </div>
             <div>
               <label className="text-xs text-gray-500 mb-1 block">Email</label>
-              <p className="text-sm text-gray-900">
-                {customerData.contactDetails.email}
-              </p>
+              <p className="text-sm text-gray-900">{contactDetails.email}</p>
             </div>
             <div>
-              <label className="text-xs text-gray-500 mb-1 block">
-                Address
-              </label>
-              <p className="text-sm text-gray-900">
-                {customerData.contactDetails.address}
-              </p>
+              <label className="text-xs text-gray-500 mb-1 block">Address</label>
+              <p className="text-sm text-gray-900">{contactDetails.address}</p>
             </div>
             <div>
-              <label className="text-xs text-gray-500 mb-1 block">
-                Phone Number
-              </label>
-              <p className="text-sm text-gray-900">
-                {customerData.contactDetails.phone}
-              </p>
+              <label className="text-xs text-gray-500 mb-1 block">Phone Number</label>
+              <p className="text-sm text-gray-900">{contactDetails.phone}</p>
             </div>
           </div>
         </div>
 
-        {/* Orders List - Pass data to your existing OrderSummary component */}
+        {/* Orders List */}
         {filteredOrders.length > 0 ? (
-          filteredOrders.map((order) => (
-            <div key={order.orderId} className="mb-8">
+          filteredOrders.map((order: ApiOrder) => (
+            <div key={order._id} className="mb-8">
               <OrderSummary
-                orderData={order}
-                orderStatus={order.status}
+                orderData={convertToOrderData(order)}
+                orderStatus={order.state}
                 statusConfig={statusConfig}
               />
             </div>
@@ -385,7 +326,7 @@ const CustomerManagement: React.FC = () => {
         ) : (
           <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
             <p className="text-gray-500">
-              No orders found matching your filters
+              {customerOrders.length === 0 ? "No orders found for this customer" : "No orders found matching your filters"}
             </p>
           </div>
         )}

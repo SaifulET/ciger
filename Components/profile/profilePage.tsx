@@ -164,14 +164,14 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen ml-8 flex items-center justify-center">
+      <div className="min-h-screen ml-8 flex items-center justify-center text-gray-800">
         <div className="text-lg">Loading profile...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen ml-8">
+    <div className="min-h-screen ml-8  text-gray-800">
       <div className="">
         {/* Header */}
         <div className="flex justify-between items-center mb-8 bg-white px-10 py-6 rounded-lg">

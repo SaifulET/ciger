@@ -21,6 +21,10 @@ interface UserStoreState {
   OtpOnChange: (name: string, value: string) => void;
 
   isFormSubmit: boolean;
+  
+  // New method for initialization
+  initializeAuth: () => void;
+  
   UserLoginRequest: (
     email: string,
     password: string
@@ -61,8 +65,38 @@ const useUserStore = create<UserStoreState>()(
     (set, get) => ({
       // ---- Auth ----
       user: "",
-      isLoggedIn: !!Cookies.get("token"),
+      isLoggedIn: false, // Initialize as false, will be set by initializeAuth
       isLogin: () => !!Cookies.get("token"),
+
+      // ---- Initialize Auth State ----
+      initializeAuth: () => {
+        const token = Cookies.get("token");
+        const currentState = get();
+        
+        console.log("Initializing auth:", { 
+          token: !!token, 
+          persistedUser: currentState.user,
+          persistedIsLoggedIn: currentState.isLoggedIn 
+        });
+
+        if (token) {
+          // Token exists, ensure consistent state
+          if (!currentState.user) {
+            // If we have token but no user ID, we're logged in but missing user data
+            // You might want to fetch user data here if needed
+            set({ isLoggedIn: true });
+            console.log("Token exists but no user - setting isLoggedIn: true");
+          } else {
+            // Both token and user exist - everything is consistent
+            set({ isLoggedIn: true });
+            console.log("Token and user exist - auth state consistent");
+          }
+        } else {
+          // No token - clear everything
+          set({ isLoggedIn: false, user: "" });
+          console.log("No token - clearing auth state");
+        }
+      },
 
       // ---- Login ----
       loginFormData: { email: "" },
@@ -92,16 +126,24 @@ const useUserStore = create<UserStoreState>()(
       // ---- API Calls ----
       UserLoginRequest: async (email, password) => {
         try {
-          console.log(email,password);
+          console.log("Login attempt:", email, password);
           const res = await api.post("/admin/signin", {
             email,
             password,
           });
+
+          console.log("Login response:", res.data);
           
+          // Set token and user data
           Cookies.set("token", res.data.token);
-          console.log(res.data.data._id)
-          set({ user: res.data.data._id });
-          set({ isLoggedIn: true });
+          const userId = res.data.data._id;
+          
+          set({ 
+            user: userId,
+            isLoggedIn: true 
+          });
+
+          console.log("Login successful - user ID set:", userId);
 
           return {
             status: "success",
@@ -110,7 +152,7 @@ const useUserStore = create<UserStoreState>()(
           };
         } catch (error: unknown) {
           const err = error as AxiosError<{ message?: string }>;
-          console.log(err);
+          console.log("Login error:", err);
           return {
             status: "error",
             message: err.response?.data?.message || err.message,
@@ -143,7 +185,7 @@ const useUserStore = create<UserStoreState>()(
       UserForgetPasswordRequest: async (email) => {
         try {
           const res = await api.post("/admin/forget-password", { email });
-          console.log("eeee");
+          console.log("Forget password request sent");
           setEmail(email);
           return res.data;
         } catch (error: unknown) {
@@ -158,18 +200,18 @@ const useUserStore = create<UserStoreState>()(
 
       VerifyOtpRequest: async (otp) => {
         const email = getEmail();
-        console.log(email);
+        console.log("Verifying OTP for email:", email);
         const res = await api.post("/admin/verifyOtp", { email, otp });
-        console.log("line173");
 
         if (res.data.status === "success") {
-          console.log("dkd");
+          console.log("OTP verification successful");
           return { status: "success", message: res.data.message };
         } else {
-          console.log(res);
+          console.log("OTP verification failed:", res);
           return { status: "error", message: res.data.message };
         }
       },
+      
       UserNewPassword: async (password, confirmPassword) => {
         const email = getEmail();
         const res = await api.post("/admin/reset-password", {
@@ -177,24 +219,38 @@ const useUserStore = create<UserStoreState>()(
           password,
           confirmPassword,
         });
-        console.log(res);
+        console.log("Password reset response:", res);
         if (res.data.success === true) {
-          console.log("dkd");
+          console.log("Password reset successful");
           return { status: "success", message: res.data.message };
         } else {
-          console.log(res);
+          console.log("Password reset failed");
           return { status: "error", message: res.data.message };
         }
       },
 
       UserLogoutRequest: async () => {
-        console.log("logiout")
-        const res = await api.post("/admin/signout");
-        Cookies.remove("token");
-        set({ user: "" });
-        set({ isLoggedIn: false });
-       
-        return res.data["status"];
+        console.log("Logging out");
+        try {
+          const res = await api.post("/admin/signout");
+          // Clear both cookie and store state
+          Cookies.remove("token");
+          set({ 
+            user: "", 
+            isLoggedIn: false 
+          });
+          console.log("Logout successful");
+          return res.data["status"];
+        } catch (error) {
+          console.log("Logout error:", error);
+          // Still clear local state even if API call fails
+          Cookies.remove("token");
+          set({ 
+            user: "", 
+            isLoggedIn: false 
+          });
+          return "success"; // Or handle error appropriately
+        }
       },
     }),
     {
@@ -204,8 +260,21 @@ const useUserStore = create<UserStoreState>()(
         user: state.user,
         loginFormData: state.loginFormData,
       }),
+      // Optional: Add version to handle future migrations
+      version: 1,
     }
   )
 );
+
+// Initialize auth state when store is created
+useUserStore.getState().initializeAuth();
+
+// Optional: Also initialize when the module loads (in case of SSR or hot reload)
+if (typeof window !== 'undefined') {
+  // You can also re-initialize on focus if needed
+  window.addEventListener('focus', () => {
+    useUserStore.getState().initializeAuth();
+  });
+}
 
 export default useUserStore;

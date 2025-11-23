@@ -20,6 +20,22 @@ const BrandManagement: React.FC = () => {
   const endIndex = startIndex + itemsPerPage;
   const currentBrands = brands.slice(startIndex, endIndex);
 
+  // Generate visible page numbers (max 4 at a time)
+  const getVisiblePages = () => {
+    const visiblePages = 4;
+    let startPage = Math.max(1, currentPage - Math.floor(visiblePages / 2));
+    let endPage = startPage + visiblePages - 1;
+
+    if (endPage > totalPages) {
+      endPage = totalPages;
+      startPage = Math.max(1, endPage - visiblePages + 1);
+    }
+
+    return Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
+  };
+
+  const visiblePages = getVisiblePages();
+
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this brand?')) {
       await deleteBrand(id);
@@ -63,7 +79,7 @@ const BrandManagement: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen ml-8">
+    <div className="min-h-screen ml-8 text-gray-800">
       <div className="">
         {/* Header */}
         <div className="flex justify-between items-center mb-6 bg-white px-8 py-6 rounded-lg">
@@ -154,7 +170,26 @@ const BrandManagement: React.FC = () => {
             >
               &lt;
             </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            
+            {/* Show first page if not in visible range */}
+            {visiblePages[0] > 1 && (
+              <>
+                <button
+                  onClick={() => goToPage(1)}
+                  className={`px-4 py-2 rounded-lg transition-colors ${
+                    currentPage === 1
+                      ? 'text-[#C9A040] border border-[#C9A040]'
+                      : 'border border-gray-500 hover:bg-gray-50'
+                  }`}
+                >
+                  1
+                </button>
+                {visiblePages[0] > 2 && <span className="px-2 py-2">...</span>}
+              </>
+            )}
+
+            {/* Visible pages */}
+            {visiblePages.map((page) => (
               <button
                 key={page}
                 onClick={() => goToPage(page)}
@@ -167,6 +202,26 @@ const BrandManagement: React.FC = () => {
                 {page}
               </button>
             ))}
+
+            {/* Show last page if not in visible range */}
+            {visiblePages[visiblePages.length - 1] < totalPages && (
+              <>
+                {visiblePages[visiblePages.length - 1] < totalPages - 1 && (
+                  <span className="px-2 py-2">...</span>
+                )}
+                <button
+                  onClick={() => goToPage(totalPages)}
+                  className={`px-4 py-2 rounded-lg transition-colors ${
+                    currentPage === totalPages
+                      ? 'text-[#C9A040] border border-[#C9A040]'
+                      : 'border border-gray-500 hover:bg-gray-50'
+                  }`}
+                >
+                  {totalPages}
+                </button>
+              </>
+            )}
+            
             <button
               onClick={() => goToPage(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages}
