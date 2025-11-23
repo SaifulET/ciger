@@ -77,7 +77,7 @@ export default function InventoryManagement() {
   };
 
   return (
-    <div className="px-6">
+    <div className="px-6 text-gray-800">
       <div>
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 p-6 bg-white rounded-lg">

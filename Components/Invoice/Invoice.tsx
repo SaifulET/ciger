@@ -4,11 +4,12 @@ import React, { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import logo from "@/public/logo.svg";
+import { useOrderStore, ApiOrder } from '@/app/store/useOrderStore'; // Adjust import path as needed
 
 // Use the real jsPDF type for correct typing (no `any`)
 type JsPDFConstructor = typeof import("jspdf").jsPDF;
 
-// Types
+// Types derived from ApiOrder
 interface InvoiceItem {
   id: number;
   product: string;
@@ -43,51 +44,106 @@ interface InvoiceData {
   total: number;
 }
 
-// Sample data - Replace with actual data from API or props
-const invoiceData: InvoiceData = {
-  orderId: "TP-123",
-  trackingNo: "TP-123",
-  placedOn: "Sep 20, 2025",
-  companyPhone: "689296744",
-  companyEmail: "admin@tele-portes.com",
-  contact: {
-    name: "John Doe",
-    email: "example@gmail.com",
-    phone: "+8801XXXXXXX",
-  },
-  deliveryAddress: "43, Moskhali 1232, Dhaka, Bangladesh",
-  items: [
-    { id: 1, product: "Good Stuff Red Pipe Tobacco ", unitPrice: 24.5, quantity: 3, price: 24.5 },
-    { id: 2, product: "Good Stuff Red Pipe Tobacco ", unitPrice: 24.5, quantity: 3, price: 24.5 },
-    { id: 3, product: "Good Stuff Red Pipe Tobacco ", unitPrice: 24.5, quantity: 3, price: 24.5 },
-    { id: 4, product: "Good Stuff Red Pipe Tobacco ", unitPrice: 24.5, quantity: 3, price: 24.5 },
-  ],
-  subTotal: 171.5,
-  shippingCost: 24.5,
-  salesTax: { percentage: "5%", amount: 24.5 },
-  discountCode: { percentage: "5%", amount: 24.5 },
-  total: 171.5,
+// Helper function to transform ApiOrder to InvoiceData
+const transformOrderToInvoiceData = (order: ApiOrder): InvoiceData => {
+  // Calculate sales tax percentage
+  const taxPercentage = order.subtotal > 0 ? `${((order.tax / order.subtotal) * 100).toFixed(1)}%` : "0%";
+  
+  // Calculate discount percentage
+  const discountPercentage = order.subtotal > 0 ? `${((order.discount / order.subtotal) * 100).toFixed(1)}%` : "0%";
+  
+  // Transform cart items to invoice items
+  const items: InvoiceItem[] = order.carts.map((cartItem, index) => ({
+    id: index + 1,
+    product: cartItem.productId.name,
+    unitPrice: cartItem.productId.price,
+    quantity: cartItem.quantity,
+    price: cartItem.total
+  }));
+
+  // Format date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
+
+  return {
+    orderId: order.orderId,
+    trackingNo: order.trackingNo,
+    placedOn: formatDate(order.createdAt),
+    companyPhone: "689296744", // Static company info
+    companyEmail: "admin@tele-portes.com", // Static company info
+    contact: {
+      name: order.name,
+      email: order.email,
+      phone: order.phone
+    },
+    deliveryAddress: order.address,
+    items,
+    subTotal: order.subtotal,
+    shippingCost: order.shippingCost,
+    salesTax: {
+      percentage: taxPercentage,
+      amount: order.tax
+    },
+    discountCode: {
+      percentage: discountPercentage,
+      amount: order.discount
+    },
+    total: order.total
+  };
 };
 
 const InvoicePage: React.FC = () => {
   const router = useRouter();
+  const { 
+    currentOrder, 
+    orderLoading, 
+    orderError, 
+    fetchOrderById,
+    clearCurrentOrder 
+  } = useOrderStore();
 
   // useParams returns a record of route params in app router - be defensive with typing
   const params = useParams() as Record<string, string | string[] | undefined> | undefined;
 
-  // Resolve an `id` param — fallback to invoiceData.orderId when not present
+  // Resolve an `id` param
   const resolvedId: string =
     typeof params?.id === "string"
       ? params.id
       : Array.isArray(params?.id)
-      ? params.id[0] ?? invoiceData.orderId
-      : invoiceData.orderId;
+      ? params.id[0] ?? ""
+      : "";
+
+  // Fetch order data when component mounts or id changes
+  useEffect(() => {
+    if (resolvedId) {
+      fetchOrderById(resolvedId);
+    }
+  }, [resolvedId, fetchOrderById]);
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      clearCurrentOrder();
+    };
+  }, [clearCurrentOrder]);
 
   useEffect(() => {
+    // Only proceed if we have order data and no loading/error
+    if (!currentOrder || orderLoading || orderError) return;
+
     let cancelled = false;
 
     (async () => {
       try {
+        // Transform API data to invoice format
+        const invoiceData = transformOrderToInvoiceData(currentOrder);
+
         // Dynamically import jspdf on client only (keeps bundle small until needed)
         const mod = await import("jspdf");
         const jsPDFCtor = mod.jsPDF as JsPDFConstructor;
@@ -113,11 +169,8 @@ const InvoicePage: React.FC = () => {
         // ---------------- Details Section (Rounded) ----------------
         yPos += 25;
         const detailsHeight = 40;
-        // Note: roundedRect exists in jspdf 2.x (when using the "jspdf" package)
-        // If you use an older version remove roundedRect or replace with rect()
         try {
           doc.setDrawColor(229, 231, 235);
-         
           (doc as unknown as { roundedRect?: (...args: unknown[]) => void }).roundedRect?.(
             margin,
             yPos,
@@ -146,7 +199,6 @@ const InvoicePage: React.FC = () => {
         const contactY = yPos + detailsHeight + 5;
         const contactHeight = 20;
         try {
-        
           (doc as unknown as { roundedRect?: (...args: unknown[]) => void }).roundedRect?.(
             margin,
             contactY,
@@ -181,7 +233,6 @@ const InvoicePage: React.FC = () => {
         const addressLines = doc.splitTextToSize(invoiceData.deliveryAddress, pageWidth - 2 * margin - 10);
         const addressHeight = 15 + addressLines.length * 5;
         try {
-      
           (doc as unknown as { roundedRect?: (...args: unknown[]) => void }).roundedRect?.(
             margin,
             addressY,
@@ -213,7 +264,6 @@ const InvoicePage: React.FC = () => {
         const rowHeight = 6;
         const summaryHeight = tableHeaderHeight + invoiceData.items.length * rowHeight + 35; // includes totals
         try {
-        
           (doc as unknown as { roundedRect?: (...args: unknown[]) => void }).roundedRect?.(
             margin,
             summaryY,
@@ -267,8 +317,8 @@ const InvoicePage: React.FC = () => {
 
         addTotalRow("Sub Total", `$${invoiceData.subTotal.toFixed(2)}`);
         addTotalRow("Shipping Cost", `$${invoiceData.shippingCost.toFixed(2)}`);
-        addTotalRow(`Sales Tax (${invoiceData.salesTax.percentage})`, `$${invoiceData.salesTax.amount.toFixed(2)}`);
-        addTotalRow(`Discount CODE (${invoiceData.discountCode.percentage})`, `$${invoiceData.discountCode.amount.toFixed(2)}`);
+        addTotalRow(`Sales Tax (${invoiceData.salesTax.amount}%)`, `$${((invoiceData.salesTax.amount/100)*invoiceData.subTotal).toFixed(2)}`);
+        addTotalRow(`Discount CODE (${invoiceData.discountCode.amount}%)`, `$${((invoiceData.discountCode.amount/100)*invoiceData.subTotal).toFixed(2)}`);
         addTotalRow("Total", `$${invoiceData.total.toFixed(2)}`, true);
 
         // ---------------- Big Rounded Border for Details + Contact + Delivery + Summary + Totals ----------------
@@ -276,7 +326,6 @@ const InvoicePage: React.FC = () => {
         const bigBorderHeight = rowY - 20 + 2; // cover till totals
         doc.setDrawColor(200, 200, 200);
         try {
-          
           (doc as unknown as { roundedRect?: (...args: unknown[]) => void }).roundedRect?.(
             margin - 2,
             bigBorderY,
@@ -294,15 +343,11 @@ const InvoicePage: React.FC = () => {
         doc.save(`invoice-${invoiceData.orderId}.pdf`);
 
         // Redirect once PDF has been saved/generated
-        // Use a tiny delay so the save prompt is triggered first in some browsers
         setTimeout(() => {
-          // construct destination path similar to your original
           const destination = `/pages/order/viewOrder/${resolvedId}`;
           router.push(destination);
         }, 50);
       } catch (err) {
-        // Log the error — do not use `any` type; log as unknown
-        // eslint-disable-next-line no-console
         console.error("Failed to generate invoice PDF:", err);
         // still attempt to navigate even if PDF generation fails
         router.push(`/pages/order/viewOrder/${resolvedId}`);
@@ -312,11 +357,48 @@ const InvoicePage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-    // resolvedId and router are stable enough for dependency list; including them is explicit
-  }, [resolvedId, router]);
+  }, [currentOrder, orderLoading, orderError, resolvedId, router]);
+
+  // Show loading state
+  if (orderLoading) {
+    return (
+      <div className="min-h-screen bg-white p-8 max-w-4xl mx-auto flex items-center justify-center text-gray-800">
+        <div className="text-center">
+          <div className="text-lg font-semibold mb-4">Loading order data...</div>
+          <div className="text-gray-500">Preparing your invoice</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (orderError) {
+    return (
+      <div className="min-h-screen bg-white p-8 max-w-4xl mx-auto flex items-center justify-center">
+        <div className="text-center text-red-600">
+          <div className="text-lg font-semibold mb-4">Error loading order</div>
+          <div className="mb-4">{orderError}</div>
+          <button 
+            onClick={() => router.push(`/pages/order/viewOrder/${resolvedId}`)}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Back to Order
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show invoice preview while generating PDF (only shown briefly)
+  const invoiceData = currentOrder ? transformOrderToInvoiceData(currentOrder) : null;
+
+  if (!invoiceData) {
+    return null;
+  }
+  console.log(invoiceData,"398")
 
   return (
-    <div className="min-h-screen bg-white p-8 max-w-4xl mx-auto">
+    <div className="min-h-screen bg-white p-8 max-w-4xl mx-auto text-gray-800">
       {/* Header */}
       <div className="flex justify-between items-start mb-12">
         <div className="">
@@ -415,15 +497,15 @@ const InvoicePage: React.FC = () => {
             <div className="flex justify-between text-sm py-2">
               <span>Sales Tax</span>
               <div className="flex gap-8">
-                <span className="text-gray-500">{invoiceData.salesTax.percentage}</span>
-                <span>${invoiceData.salesTax.amount.toFixed(2)}</span>
+                <span className="text-gray-500">{invoiceData.salesTax.amount}%</span>
+                <span>${((invoiceData.salesTax.amount/100)*(invoiceData.subTotal)).toFixed(2)}</span>
               </div>
             </div>
             <div className="flex justify-between text-sm py-2">
               <span>Discount CODE</span>
               <div className="flex gap-8">
-                <span className="text-gray-500">{invoiceData.discountCode.percentage}</span>
-                <span>${invoiceData.discountCode.amount.toFixed(2)}</span>
+                <span className="text-gray-500">{invoiceData.discountCode.amount}%</span>
+                <span>${((invoiceData.discountCode.amount/100)*invoiceData.subTotal).toFixed(2)}</span>
               </div>
             </div>
             <div className="flex justify-between text-base font-bold py-2 border-t border-gray-300 mt-2 pt-3">

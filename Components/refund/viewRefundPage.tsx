@@ -1,12 +1,14 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ChevronLeft } from "lucide-react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft02Icon } from "@hugeicons/core-free-icons";
 import OrderSummary from "@/Components/order/OrderSummary";
+import { useOrderStore, ApiOrder } from '@/app/store/useOrderStore';
+import { useParams, useRouter } from "next/navigation";
 
 // ================= TYPES =================
-type OrderStatus = "canceled" | "delivered" | "shipped" | "processing";
+type OrderStatus = "cancelled" | "delivered" | "shipped" | "processing"|"refunded";
 
 interface StatusConfig {
   bg: string;
@@ -43,55 +45,86 @@ interface OrderData {
   shippingCost: number;
   subTotal: number;
   payment: { status: string; amount: number };
-  refund: boolean; // ✅ Added refund field
+  refund: boolean;
+  total: number;
 }
-
-// ================= SAMPLE DATA =================
-const orderData: OrderData = {
-  orderId: "10234",
-  trackingNo: "62862616",
-  placedOn: "Sep 22, 2025",
-  contact: {
-    name: "John Doe",
-    email: "example@gmail.com",
-    phone: "+8801XXXXXXX",
-    address: "43, Moskhali, 1234, Dhaka, Bangladesh",
-  },
-  items: [
-    {
-      id: 1,
-      image: "/api/placeholder/50/50",
-      brand: "Brand Name",
-      product: "Good Stuff Red Pipe Tobacco - 16 oz. Bag",
-      unitPrice: 126.66,
-      quantity: 2,
-      total: 253.32,
-    },
-    {
-      id: 2,
-      image: "/api/placeholder/50/50",
-      brand: "Brand Name",
-      product: "Good Stuff Red Pipe Tobacco - 16 oz. Bag",
-      unitPrice: 126.66,
-      quantity: 2,
-      total: 253.32,
-    },
-  ],
-  tax: { label: "5%", amount: 12.66 },
-  discount: { label: "5%", amount: 6.33 },
-  shippingCost: 15.0,
-  subTotal: 500.65,
-  payment: { status: "Paid", amount: 521.98 },
-  refund: false, // ✅ Initially not refunded
-};
 
 // ================= PAGE COMPONENT =================
 const OrderDetailsPage: React.FC = () => {
-  const [orderStatus, setOrderStatus] = useState<OrderStatus>("canceled");
-  const [isRefunded, setIsRefunded] = useState(orderData.refund);
+  const [orderStatus, setOrderStatus] = useState<OrderStatus>("cancelled");
+  const [isRefunded, setIsRefunded] = useState(false);
+  const [orderData, setOrderData] = useState<OrderData | null>(null);
+
+  const { currentOrder, orderLoading, orderError, fetchOrderById } = useOrderStore();
+  const params = useParams();
+  const router = useRouter();
+
+  // Get order ID from URL params
+  const orderId = typeof params.id === 'string' ? params.id : Array.isArray(params.id) ? params.id[0] : '';
+
+  // Fetch order data when component mounts
+  useEffect(() => {
+    if (orderId) {
+      fetchOrderById(orderId);
+    }
+  }, [orderId, fetchOrderById]);
+
+  // Transform store data to component format
+  useEffect(() => {
+    if (currentOrder) {
+      // Ensure we only show cancelled orders
+      if (currentOrder.state !== 'cancelled') {
+        router.push('/pages/refunds');
+        return;
+      }
+
+      const transformedData: OrderData = {
+        orderId: currentOrder.orderId,
+        trackingNo: currentOrder.trackingNo,
+        placedOn: new Date(currentOrder.createdAt).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        }),
+        contact: {
+          name: currentOrder.name,
+          email: currentOrder.email,
+          phone: currentOrder.phone,
+          address: currentOrder.address
+        },
+        items: currentOrder.carts.map((cartItem, index) => ({
+          id: index + 1,
+          image: cartItem.productId.images?.[0] || "/api/placeholder/50/50",
+          brand: cartItem.productId.brandId?.name || "Brand Name",
+          product: cartItem.productId.name,
+          unitPrice: cartItem.productId.price,
+          quantity: cartItem.quantity,
+          total: cartItem.total
+        })),
+        tax: { 
+          label: `${((currentOrder.tax / currentOrder.subtotal) * 100).toFixed(1)}%`, 
+          amount: currentOrder.tax 
+        },
+        discount: { 
+          label: `${((currentOrder.discount / currentOrder.subtotal) * 100).toFixed(1)}%`, 
+          amount: currentOrder.discount 
+        },
+        shippingCost: currentOrder.shippingCost,
+        subTotal: currentOrder.subtotal,
+        payment: { 
+          status: "Paid", 
+          amount: currentOrder.total 
+        },
+        refund: false,
+        total: currentOrder.total
+      };
+
+      setOrderData(transformedData);
+    }
+  }, [currentOrder, router]);
 
   const statusConfig: Record<OrderStatus, StatusConfig> = {
-    canceled: {
+    cancelled: {
       bg: "bg-[#FCEAEA]",
       text: "text-[#DD2C2C]",
       border: "border-red-200",
@@ -115,19 +148,55 @@ const OrderDetailsPage: React.FC = () => {
       border: "border-yellow-200",
       dotColor: "bg-[#B27B0E]",
     },
+     refunded: {
+      bg: "bg-[#FCEAEA]",
+      text: "text-[#DD2C2C]",
+      border: "border-red-200",
+      dotColor: "bg-[#DD2C2C]",
+    },
   };
 
   const navigateToOrders = () => {
-    window.location.href = "/pages/refunds";
+    router.push("/pages/refunds");
   };
 
   const handleRefundToggle = () => {
     setIsRefunded((prev) => !prev);
-    orderData.refund=isRefunded;
+    // Here you would typically call an API to update the refund status
   };
 
+  // Loading state
+  if (orderLoading || !orderData) {
+    return (
+      <div className="min-h-screen ml-8 flex items-center justify-center text-gray-800">
+        <div className="text-center">
+          <div className="text-lg font-semibold mb-4">Loading order details...</div>
+          <div className="text-gray-500">Fetching cancelled order information</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (orderError) {
+    return (
+      <div className="min-h-screen ml-8 flex items-center justify-center text-gray-800">
+        <div className="text-center text-red-600">
+          <div className="text-lg font-semibold mb-4">Error loading order</div>
+          <div className="mb-4">{orderError}</div>
+          <button 
+            onClick={() => navigateToOrders()}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Back to Refunds
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen ml-8">
+    <div className="min-h-screen ml-8 text-gray-800">
       {/* ===== HEADER ===== */}
       <div className="pt-3 pb-2 rounded-lg px-6 bg-white mb-8">
         <div className="flex items-center justify-start">
@@ -140,7 +209,7 @@ const OrderDetailsPage: React.FC = () => {
               <span className="text-sm">Refund Management</span>
             </button>
             <ChevronLeft className="w-4 h-4 text-gray-400 rotate-180" />
-            <span className="text-sm text-gray-500">View Canceled Order</span>
+            <span className="text-sm text-gray-500">View Cancelled Order</span>
           </div>
         </div>
 
@@ -187,16 +256,15 @@ const OrderDetailsPage: React.FC = () => {
       </div>
 
       {/* ===== REUSABLE COMPONENT ===== */}
-      <div className={`relative ${orderStatus === "canceled" ? "pb-[60px] bg-white rounded-lg" : "pb-0"}`}>
+      <div className={`relative ${orderStatus === "cancelled" ? "pb-[60px] bg-white rounded-lg" : "pb-0"}`}>
         <OrderSummary
           orderData={orderData}
           orderStatus={orderStatus}
           statusConfig={statusConfig}
-          
         />
 
-        {/* ✅ Refund Button for canceled orders */}
-        {orderStatus === "canceled" && (
+        {/* ✅ Refund Button for cancelled orders */}
+        {orderStatus === "cancelled" && (
           <div className="absolute bottom-3 right-6">
             <button
               onClick={handleRefundToggle}

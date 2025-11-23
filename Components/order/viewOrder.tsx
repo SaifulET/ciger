@@ -1,12 +1,14 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ChevronLeft, ChevronDown, ChevronUp } from "lucide-react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft02Icon } from "@hugeicons/core-free-icons";
 import OrderSummary from "@/Components/order/OrderSummary";
+import { useParams, useRouter } from "next/navigation";
+import { useOrderStore } from "@/app/store/useOrderStore";
 
 // ================= TYPES =================
-type OrderStatus = "canceled" | "delivered" | "shipped" | "processing";
+type OrderStatus = "cancelled" | "delivered" | "shipped" | "processing" | "refunded";
 
 interface StatusConfig {
   bg: string;
@@ -45,51 +47,41 @@ interface OrderData {
   payment: { status: string; amount: number };
 }
 
-// ================= SAMPLE DATA =================
-const orderData: OrderData = {
-  orderId: "10234",
-  trackingNo: "62862616",
-  placedOn: "Sep 22, 2025",
-  contact: {
-    name: "John Doe",
-    email: "example@gmail.com",
-    phone: "+8801XXXXXXX",
-    address: "43, Moskhali, 1234, Dhaka, Bangladesh",
-  },
-  items: [
-    {
-      id: 1,
-      image: "/api/placeholder/50/50",
-      brand: "Brand Name",
-      product: "Good Stuff Red Pipe Tobacco - 16 oz. Bag",
-      unitPrice: 126.66,
-      quantity: 2,
-      total: 253.32,
-    },
-    {
-      id: 2,
-      image: "/api/placeholder/50/50",
-      brand: "Brand Name",
-      product: "Good Stuff Red Pipe Tobacco - 16 oz. Bag",
-      unitPrice: 126.66,
-      quantity: 2,
-      total: 253.32,
-    },
-  ],
-  tax: { label: "5%", amount: 12.66 },
-  discount: { label: "5%", amount: 6.33 },
-  shippingCost: 15.0,
-  subTotal: 500.65,
-  payment: { status: "Paid", amount: 521.98 },
-};
-
 // ================= PAGE COMPONENT =================
 const OrderDetailsPage: React.FC = () => {
   const [orderStatus, setOrderStatus] = useState<OrderStatus>("processing");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [trackingNumber, setTrackingNumber] = useState("");
+
+  const params = useParams();
+  const orderId = params.id as string;
+  const router = useRouter();
+
+  const { 
+    currentOrder, 
+    orderLoading, 
+    orderError, 
+    updateLoading,
+    updateError,
+    fetchOrderById, 
+    updateOrder 
+  } = useOrderStore();
+
+  useEffect(() => {
+    if (orderId) {
+      fetchOrderById(orderId);
+    }
+  }, [orderId, fetchOrderById]);
+
+  useEffect(() => {
+    if (currentOrder) {
+      setOrderStatus(currentOrder.state as OrderStatus);
+      setTrackingNumber(currentOrder.trackingNo || "");
+    }
+  }, [currentOrder]);
 
   const statusConfig: Record<OrderStatus, StatusConfig> = {
-    canceled: {
+    cancelled: {
       bg: "bg-[#FCEAEA]",
       text: "text-[#DD2C2C]",
       border: "border-red-200",
@@ -113,23 +105,135 @@ const OrderDetailsPage: React.FC = () => {
       border: "border-yellow-200",
       dotColor: "bg-[#B27B0E]",
     },
+    refunded: {
+      bg: "bg-[#FCEAEA]",
+      text: "text-[#DD2C2C]",
+      border: "border-red-200",
+      dotColor: "bg-[#DD2C2C]",
+    },
+  };
+
+  // Convert API order to OrderSummary format
+  const convertToOrderData = (): OrderData => {
+    if (!currentOrder) {
+      return {
+        orderId: "",
+        trackingNo: "",
+        placedOn: "",
+        contact: { name: "", email: "", phone: "", address: "" },
+        items: [],
+        tax: { label: "0%", amount: 0 },
+        discount: { label: "0%", amount: 0 },
+        shippingCost: 0,
+        subTotal: 0,
+        payment: { status: "Pending", amount: 0 },
+      };
+    }
+
+    // Calculate tax amount
+    const calculateTaxAmount = (tax: number, subTotal: number): number => {
+      return (subTotal * tax) / 100;
+    };
+
+    const taxAmount = calculateTaxAmount(currentOrder.tax, currentOrder.subtotal);
+    const discountAmount = (currentOrder.subtotal * currentOrder.discount) / 100;
+
+    return {
+      orderId: currentOrder.orderId,
+      trackingNo: currentOrder.trackingNo,
+      placedOn: currentOrder.date,
+      contact: {
+        name: currentOrder.name,
+        email: currentOrder.email,
+        phone: currentOrder.phone,
+        address: currentOrder.address,
+      },
+      items: currentOrder.carts.map((cart, index) => ({
+        id: index + 1,
+        image: cart.productId.images[0] || "/api/placeholder/50/50",
+        brand: cart.productId.brandId.name,
+        product: cart.productId.name,
+        unitPrice: cart.productId.price,
+        quantity: cart.quantity,
+        total: cart.total,
+      })),
+      tax: { 
+        label: `${currentOrder.tax}%`, 
+        amount: taxAmount 
+      },
+      discount: { 
+        label: `${currentOrder.discount}%`, 
+        amount: discountAmount 
+      },
+      shippingCost: currentOrder.shippingCost,
+      subTotal: currentOrder.subtotal,
+      payment: { 
+        status: mapPaymentStatus(currentOrder.state), 
+        amount: currentOrder.total 
+      },
+    };
+  };
+
+  const mapPaymentStatus = (state: string): string => {
+    switch (state) {
+      case "delivered": return "Paid";
+      case "refunded": return "Refunded";
+      case "cancelled": return "Cancelled";
+      default: return "Pending";
+    }
   };
 
   const downloadInvoice = () => {
-    window.location.href = `/invoice/${orderData.orderId}`;
+    if (currentOrder) {
+      window.location.href = `/invoice/${currentOrder._id}`;
+    }
   };
 
-  const handleStatusChange = (status: OrderStatus) => {
+  const handleStatusChange = async (status: OrderStatus) => {
     setOrderStatus(status);
     setIsDropdownOpen(false);
+    
+    if (orderId) {
+      await updateOrder(orderId, { state: status });
+    }
+  };
+
+  const handleTrackingSave = async () => {
+    if (orderId && trackingNumber) {
+      await updateOrder(orderId, { trackingNo: trackingNumber });
+    }
   };
 
   const navigateToOrders = () => {
-    window.location.href = "/pages/order";
+    router.push("/pages/order");
   };
 
+  if (orderLoading) {
+    return (
+      <div className="min-h-screen ml-8 text-gray-800 flex items-center justify-center">
+        <div className="text-lg">Loading order details...</div>
+      </div>
+    );
+  }
+
+  if (orderError) {
+    return (
+      <div className="min-h-screen ml-8 text-gray-800 flex items-center justify-center">
+        <div className="text-lg text-red-500">Error: {orderError}</div>
+      </div>
+    );
+  }
+
+  if (!currentOrder) {
+    return (
+      <div className="min-h-screen ml-8 text-gray-800 flex items-center justify-center">
+        <div className="text-lg">Order not found</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen ml-8">
+    <div className="min-h-screen ml-8 text-gray-800">
       <div className="pt-3 pb-2 rounded-lg px-6 bg-white mb-8">
         {/* ===== HEADER ===== */}
         <div className="flex items-center justify-start">
@@ -156,6 +260,7 @@ const OrderDetailsPage: React.FC = () => {
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               className="w-full md:w-64 px-4 py-2 bg-white border border-gray-300 rounded-lg flex items-center justify-between hover:border-gray-400 transition-colors"
+              disabled={updateLoading}
             >
               <span className="text-sm text-gray-700 capitalize">
                 {orderStatus}
@@ -194,13 +299,13 @@ const OrderDetailsPage: React.FC = () => {
               <label className="text-gray-500 text-sm font-semibold mb-1 block">
                 Name
               </label>
-              <p className="text-gray-900">{orderData.contact.name}</p>
+              <p className="text-gray-900">{currentOrder.name}</p>
             </div>
             <div>
               <label className="text-gray-500 text-sm font-semibold mb-1 block">
                 Email
               </label>
-              <p className="text-gray-900">{orderData.contact.email}</p>
+              <p className="text-gray-900">{currentOrder.email}</p>
             </div>
           </div>
           <div className="block md:flex items-center justify-between">
@@ -208,50 +313,60 @@ const OrderDetailsPage: React.FC = () => {
               <label className="text-gray-500 text-sm font-semibold mb-1 block">
                 Delivery Address
               </label>
-              <p className="text-gray-900">{orderData.contact.address}</p>
+              <p className="text-gray-900">{currentOrder.address}</p>
             </div>
             <div>
               <label className="text-gray-500 text-sm font-semibold mb-1 block">
                 Phone Number
               </label>
-              <p className="text-gray-900">{orderData.contact.phone}</p>
+              <p className="text-gray-900">{currentOrder.phone}</p>
             </div>
           </div>
         </div>
       </div>
 
+      {orderStatus === "processing" && (
+        <div className="w-full mt-8 space-y-3 flex items-center justify-between px-8 py-4 bg-white rounded-lg mb-8 ">
+          {/* Title */}
+          <div className="font-semibold text-[40px] leading-[48px] tracking-[0] text-gray-800">
+            Tracking Number
+          </div>
 
-{orderStatus === "processing" && (
-  <div className="w-full mt-8 space-y-3 flex items-center justify-between px-8 py-4 bg-white rounded-lg mb-8 ">
-    {/* Title */}
-    <div className=" font-semibold text-[40px] leading-[48px] tracking-[0]  text-gray-800">
-      Tracking Number
-    </div>
-
-    {/* Searchbar + Button */}
-    <div className="flex flex-wrap items-center gap-2">
-      <input
-        type="text"
-        placeholder="Enter tracking number..."
-        className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
-      />
-      <button
-        type="button"
-        className="px-4 py-2 bg-[#C9A040] text-black rounded-lg hover:bg-[#9e771b] transition-all font-semibold text-[16px] leading-[24px] tracking-[0]"
-      >
-        Send & Save
-      </button>
-    </div>
-  </div>
-)}
+          {/* Searchbar + Button */}
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="text"
+              placeholder="Enter tracking number..."
+              value={trackingNumber}
+              onChange={(e) => setTrackingNumber(e.target.value)}
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+            />
+            <button
+              type="button"
+              onClick={handleTrackingSave}
+              disabled={updateLoading || !trackingNumber}
+              className="px-4 py-2 bg-[#C9A040] text-black rounded-lg hover:bg-[#9e771b] transition-all font-semibold text-[16px] leading-[24px] tracking-[0] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {updateLoading ? "Saving..." : "Send & Save"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ===== REUSABLE COMPONENT ===== */}
       <OrderSummary
-        orderData={orderData}
+        orderData={convertToOrderData()}
         orderStatus={orderStatus}
         statusConfig={statusConfig}
         onDownload={downloadInvoice}
       />
+
+      {/* Error Display */}
+      {updateError && (
+        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-red-600">Update Error: {updateError}</p>
+        </div>
+      )}
     </div>
   );
 };

@@ -12,14 +12,27 @@ interface ApiUser {
   __v: number;
 }
 
+interface Brand {
+  _id: string;
+  name: string;
+}
+
+interface Product {
+  _id: string;
+  name: string;
+  image?: string;
+  brandId: Brand;
+}
+
 interface CartItem {
   _id: string;
-  image: string;
-  brand: string;
-  product: string;
-  unitPrice: number;
+  productId: Product;
   quantity: number;
+  unitPrice: number;
   total: number;
+  image?: string;
+  brand?: string;
+  product?: string;
 }
 
 interface ApiOrder {
@@ -36,12 +49,33 @@ interface ApiOrder {
   carts: CartItem[];
   date: string;
   tax: string;
-  subTotal: number;
+  subtotal: number;
   total: number;
   shippingCost: number;
   createdAt: string;
   updatedAt: string;
   __v: number;
+}
+
+// Add new interface for user profile
+interface UserProfile {
+  _id: string;
+  email: string;
+  name?: string;
+  phone?: string;
+  address?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// API response interfaces
+interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  profile?: T;
+  user?: T;
+  orders?: T[];
 }
 
 interface CustomerStore {
@@ -55,12 +89,72 @@ interface CustomerStore {
   ordersLoading: boolean;
   ordersError: string | null;
   
+  // User profile state
+  userProfile: UserProfile | null;
+  profileLoading: boolean;
+  profileError: string | null;
+  
   // Actions
   fetchCustomers: () => Promise<void>;
   fetchCustomerOrders: (userId: string) => Promise<void>;
+  fetchUserProfile: (userId: string) => Promise<void>;
   clearCustomers: () => void;
   clearOrders: () => void;
+  clearProfile: () => void;
 }
+
+// Helper function to extract error message
+const getErrorMessage = (error: unknown): string => {
+  if (typeof error === 'string') {
+    return error;
+  }
+  
+  if (error instanceof Error) {
+    return error.message;
+  }
+  
+  if (typeof error === 'object' && error !== null) {
+    // Axios error structure
+    if ('response' in error) {
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      if (axiosError.response?.data?.message) {
+        return axiosError.response.data.message;
+      }
+    }
+    // Generic error object with message
+    if ('message' in error && typeof (error as { message: string }).message === 'string') {
+      return (error as { message: string }).message;
+    }
+  }
+  
+  return 'An unexpected error occurred';
+};
+
+// Helper function to safely extract orders data
+const extractOrdersData = (data: unknown): ApiOrder[] => {
+  if (typeof data !== 'object' || data === null) {
+    return [];
+  }
+
+  // Handle ApiResponse structure
+  const apiResponse = data as ApiResponse<ApiOrder[]>;
+  if (apiResponse.success && Array.isArray(apiResponse.data)) {
+    return apiResponse.data;
+  }
+
+  // Handle direct array
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  // Handle orders property
+  const ordersData = data as { orders?: ApiOrder[] };
+  if (Array.isArray(ordersData.orders)) {
+    return ordersData.orders;
+  }
+
+  return [];
+};
 
 export const useCustomerStore = create<CustomerStore>((set) => ({
   // Initial state
@@ -70,43 +164,97 @@ export const useCustomerStore = create<CustomerStore>((set) => ({
   customerOrders: [],
   ordersLoading: false,
   ordersError: null,
+  userProfile: null,
+  profileLoading: false,
+  profileError: null,
 
   // Fetch all customers
   fetchCustomers: async () => {
     set({ loading: true, error: null });
     try {
-      const response = await api.get('/auth/getAllUser');
-      const data = await response.data;
+      const response = await api.get<ApiResponse<ApiUser[]>>('/auth/getAllUser');
+      const data = response.data;
       
       if (data.success) {
-        set({ customers: data.data, loading: false });
+        set({ customers: data.data || [], loading: false });
       } else {
-        set({ error: 'Failed to fetch customers', loading: false });
+        set({ error: data.message || 'Failed to fetch customers', loading: false });
       }
-    } catch (error) {
-      set({ error: 'Error fetching customers', loading: false });
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error);
+      console.log("Error fetching customers:", error);
+      set({ error: errorMessage, loading: false });
     }
   },
 
   // Fetch customer orders
   fetchCustomerOrders: async (userId: string) => {
-    set({ ordersLoading: true, ordersError: null });
+    set({ ordersLoading: true, ordersError: null, customerOrders: [] });
     try {
-        console.log("")
+      console.log("Fetching orders for user:", userId);
       const response = await api.get(`/order/userOrder/${userId}`);
-
-      const data = await response.data;
-      console.log(data,"97")
+      const data = response.data;
+      
+      console.log("Orders API Response:", data);
+      
       if (data.success) {
-        set({ customerOrders: data.data, ordersLoading: false });
+        const ordersData = extractOrdersData(data);
+        
+        console.log("Processed orders data:", ordersData);
+        console.log("First order carts structure:", ordersData[0]?.carts?.[0]);
+        
+        set({ customerOrders: ordersData, ordersLoading: false });
       } else {
-        set({ ordersError: 'Failed to fetch orders', ordersLoading: false });
+        console.log("Orders API returned success: false", data);
+        set({ 
+          ordersError: data.message || 'Failed to fetch orders', 
+          ordersLoading: false,
+          customerOrders: [] 
+        });
       }
-    } catch (error) {
-      set({ ordersError: 'Error fetching orders', ordersLoading: false });
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error);
+      console.log("Error fetching orders:", error);
+      set({ 
+        ordersError: errorMessage, 
+        ordersLoading: false,
+        customerOrders: [] 
+      });
+    }
+  },
+
+  // Fetch user profile
+  fetchUserProfile: async (userId: string) => {
+    set({ profileLoading: true, profileError: null, userProfile: null });
+    try {
+      console.log("Fetching profile for user:", userId);
+      const response = await api.get<ApiResponse<UserProfile>>(`/profile/profile/${userId}`);
+      const data = response.data;
+      
+      console.log("Profile API Response:", data);
+      
+      if (data.success) {
+        // Handle different possible response structures
+        const profileData = data.data || data.profile || data.user;
+        set({ userProfile: profileData || null, profileLoading: false });
+      } else {
+        console.log("Profile API returned success: false", data);
+        set({ 
+          profileError: data.message || 'Failed to fetch profile', 
+          profileLoading: false 
+        });
+      }
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error);
+      console.log("Error fetching profile:", error);
+      set({ 
+        profileError: errorMessage, 
+        profileLoading: false 
+      });
     }
   },
 
   clearCustomers: () => set({ customers: [], error: null }),
   clearOrders: () => set({ customerOrders: [], ordersError: null }),
+  clearProfile: () => set({ userProfile: null, profileError: null }),
 }));

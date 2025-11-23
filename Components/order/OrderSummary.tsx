@@ -59,7 +59,7 @@ const OrderSummary: React.FC<Props> = ({
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
         <div>
           <h2 className="font-semibold text-[28px] leading-[36px] tracking-[0]">
-            Order #{orderData.orderId}
+            Order {orderData.orderId}
           </h2>
           <p className="font-normal text-[16px] leading-[24px] tracking-[0] text-gray-500">
             Placed on {orderData.placedOn}
@@ -121,7 +121,7 @@ const OrderSummary: React.FC<Props> = ({
                   </p>
                 </td>
                 <td className="text-right py-4 font-semibold text-[16px] leading-[24px] tracking-[0] text-gray-900">
-                  ${item.unitPrice.toFixed(2)}
+                  ${(item.total/item.quantity).toFixed(2)}
                 </td>
                 <td className="text-right py-4 font-semibold text-[16px] leading-[24px] tracking-[0] text-gray-900">
                   {item.quantity}

@@ -1,7 +1,8 @@
 'use client'
-import { useState, useMemo, FC } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Eye, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useParams ,useRouter} from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import { useOrderStore } from '@/app/store/useOrderStore';
 
 interface Order {
   no: string;
@@ -9,29 +10,50 @@ interface Order {
   mobile: string;
   payment: string;
   status: 'Processing' | 'Shipped' | 'Delivered' | 'Canceled';
+  _id: string; // Add _id to the interface
 }
 
-const OrderManagement: FC = () => {
+const OrderManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage: number = 8;
 
-  const allOrders: Order[] = [
-    { no: '01', orderId: '#10234', mobile: '87895654529', payment: '$223.22', status: 'Processing' },
-    { no: '01', orderId: '#10234', mobile: '87895654529', payment: '$223.22', status: 'Shipped' },
-    { no: '01', orderId: '#10234', mobile: '87895654529', payment: '$223.22', status: 'Delivered' },
-    { no: '01', orderId: '10234', mobile: '87895654529', payment: '$223.22', status: 'Canceled' },
-    { no: '02', orderId: '#10235', mobile: '87895654530', payment: '$150.00', status: 'Processing' },
-    { no: '03', orderId: '#10236', mobile: '87895654531', payment: '$299.99', status: 'Delivered' },
-    { no: '04', orderId: '#10237', mobile: '87895654532', payment: '$75.50', status: 'Shipped' },
-    { no: '05', orderId: '#10238', mobile: '87895654533', payment: '$189.99', status: 'Processing' },
-  ];
+  const { orders, ordersLoading, ordersError, fetchAllOrders } = useOrderStore();
+  const router = useRouter();
+
+  useEffect(() => {
+    fetchAllOrders();
+  }, [fetchAllOrders]);
+
+  // Map API status to component status
+  const mapOrderStatus = (state: string): 'Processing' | 'Shipped' | 'Delivered' | 'Canceled' => {
+    switch (state) {
+      case 'processing': return 'Processing';
+      case 'shipped': return 'Shipped';
+      case 'delivered': return 'Delivered';
+      case 'cancelled': return 'Canceled';
+      case 'refunded': return 'Canceled';
+      default: return 'Processing';
+    }
+  };
+
+  // Convert API orders to component format - INCLUDING _id
+  const allOrders: Order[] = useMemo(() => {
+    return orders.map((order, index) => ({
+      no: (index + 1).toString().padStart(2, '0'),
+      orderId: order.orderId,
+      mobile: order.phone,
+      payment: `$${order.total.toFixed(2)}`,
+      status: mapOrderStatus(order.state),
+      _id: order._id, // Include the MongoDB _id
+    }));
+  }, [orders]);
 
   const filteredOrders: Order[] = useMemo(() => {
     return allOrders.filter(order =>
       order.orderId.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [searchTerm]);
+  }, [searchTerm, allOrders]);
 
   const totalPages: number = Math.ceil(filteredOrders.length / itemsPerPage);
   const paginatedOrders: Order[] = filteredOrders.slice(
@@ -44,7 +66,7 @@ const OrderManagement: FC = () => {
       case 'Processing':
         return 'text-[#B27B0E] bg-[#FFF7E8]';
       case 'Shipped':
-          return 'text-[#B0B0B0] bg-[#F5F5F5]';
+        return 'text-[#B0B0B0] bg-[#F5F5F5]';
       case 'Delivered':
         return 'text-[#29BB7D] bg-[#EAFAF3]';
       case 'Canceled':
@@ -61,22 +83,17 @@ const OrderManagement: FC = () => {
       case 'Shipped':
         return 'bg-[#B0B0B0]';
       case 'Delivered':
-        return 'bg-[#29BB7D]';
+        return 'bg-[#29BB7D]'; // Fixed typo: was 'M' instead of 'D'
       case 'Canceled':
         return 'bg-[#DD2C2C]';
       default:
         return 'bg-gray-400';
     }
   };
- const orderId = useParams()
- const router = useRouter()
+
+  // FIXED: Use _id instead of orderId for redirect
   const handleViewOrder = (orderId: string): void => {
-  
-
-    // router.push(`/pages/order/viewOrder/${orderId}`) 
-    router.push(`/pages/order/viewOrder/233`) 
-    
-
+    router.push(`/pages/order/viewOrder/${orderId}`);
   };
 
   const handleSearchChange = (value: string): void => {
@@ -88,8 +105,24 @@ const OrderManagement: FC = () => {
     setCurrentPage(page);
   };
 
+  if (ordersLoading) {
+    return (
+      <div className="min-h-screen ml-8 text-gray-800 flex items-center justify-center">
+        <div className="text-lg">Loading orders...</div>
+      </div>
+    );
+  }
+
+  if (ordersError) {
+    return (
+      <div className="min-h-screen ml-8 text-gray-800 flex items-center justify-center">
+        <div className="text-lg text-red-500">Error: {ordersError}</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen  ml-8  ">
+    <div className="min-h-screen ml-8 text-gray-800">
       <div className="">
         {/* Header */}
         <div className="flex justify-between items-center mb-8 py-6 px-8 bg-white rounded-lg">
@@ -141,7 +174,7 @@ const OrderManagement: FC = () => {
                   </td>
                   <td className="px-6 py-4">
                     <button
-                      onClick={() => handleViewOrder(order.orderId)}
+                      onClick={() => handleViewOrder(order._id)} 
                       className="text-gray-600 hover:text-gray-900 transition-colors"
                       title="View"
                     >

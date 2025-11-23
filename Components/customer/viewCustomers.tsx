@@ -23,14 +23,28 @@ interface ContactDetails {
   address: string;
 }
 
+interface Brand {
+  _id: string;
+  name: string;
+}
+
+interface Product {
+  _id: string;
+  name: string;
+  image?: string;
+  brandId: Brand;
+}
+
 interface CartItem {
   _id: string;
-  image: string;
-  brand: string;
-  product: string;
-  unitPrice: number;
+  productId: Product;
   quantity: number;
+  unitPrice: number;
   total: number;
+  // Legacy fields (might not be used)
+  image?: string;
+  brand?: string;
+  product?: string;
 }
 
 interface ApiOrder {
@@ -47,7 +61,7 @@ interface ApiOrder {
   carts: CartItem[];
   date: string;
   tax: string;
-  subTotal: number;
+  subtotal: number;
   total: number;
   shippingCost: number;
   createdAt: string;
@@ -115,41 +129,102 @@ const statusConfig: Record<OrderStatus, StatusConfig> = {
 const CustomerManagement: React.FC = () => {
   // Get userId from URL params
   const params = useParams();
-  console.log(params)
   const userId = params.di as string;
-  console.log(userId)
   
   // State for filters
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("All Orders");
 
-  const { customerOrders, ordersLoading, ordersError, fetchCustomerOrders } = useCustomerStore();
+  const { 
+    customerOrders, 
+    ordersLoading, 
+    ordersError, 
+    fetchCustomerOrders,
+    userProfile,
+    profileLoading,
+    profileError,
+    fetchUserProfile ,
+    clearOrders,
+    clearProfile
+  } = useCustomerStore();
 
   console.log("User ID from params:", userId);
-
+  console.log("Customer orders from store:", customerOrders);
+  console.log("User profile from store:", userProfile);
+ useEffect(() => {
+    console.log("🔄 Clearing store data for new user:", userId);
+    clearOrders();
+    clearProfile();
+  }, [userId, clearOrders, clearProfile]);
+  // Fetch orders when component mounts
   useEffect(() => {
     if (userId) {
+      console.log("Fetching orders for userId:", userId);
       fetchCustomerOrders(userId);
     }
   }, [userId, fetchCustomerOrders]);
 
-  // Get contact details from first order or use default
-  const contactDetails: ContactDetails = customerOrders.length > 0 
-    ? {
-        name: customerOrders[0].name,
-        email: customerOrders[0].email,
-        phone: customerOrders[0].phone,
-        address: customerOrders[0].address,
-      }
-    : {
-        name: "N/A",
-        email: "N/A",
-        phone: "N/A",
-        address: "N/A",
-      };
+  // Fetch profile if no orders are found
+  useEffect(() => {
+    if (userId && 
+        Array.isArray(customerOrders) && 
+        customerOrders.length === 0 && 
+        !userProfile && 
+        !ordersLoading && 
+        !profileLoading) {
+      console.log("No orders found, fetching user profile...");
+      fetchUserProfile(userId);
+    }
+  }, [userId, customerOrders, userProfile, ordersLoading, profileLoading, fetchUserProfile]);
 
-  // Filter orders based on search and status
-  const filteredOrders = customerOrders.filter((order: ApiOrder) => {
+  // CRITICAL FIX: Always ensure we're working with an array
+  const safeCustomerOrders: ApiOrder[] = Array.isArray(customerOrders) ? customerOrders : [];
+
+  // Get contact details from first order OR user profile OR use appropriate state
+  const getContactDetails = (): ContactDetails => {
+    // If we have orders, use the first order's contact info
+    if (safeCustomerOrders.length > 0) {
+      return {
+        name: safeCustomerOrders[0].name,
+        email: safeCustomerOrders[0].email,
+        phone: safeCustomerOrders[0].phone,
+        address: safeCustomerOrders[0].address,
+      };
+    }
+    
+    // If we have user profile data, use that
+    if (userProfile) {
+      return {
+        name: userProfile.name || "Not provided",
+        email: userProfile.email || "Not provided",
+        phone: userProfile.phone || "Not provided",
+        address: userProfile.address || "Not provided",
+      };
+    }
+    
+    // If we're still loading profile but have no orders
+    if (profileLoading) {
+      return {
+        name: "Loading...",
+        email: "Loading...",
+        phone: "Loading...",
+        address: "Loading...",
+      };
+    }
+    
+    // Default fallback
+    return {
+      name: "No data available",
+      email: "No data available",
+      phone: "No data available",
+      address: "No data available",
+    };
+  };
+
+  const contactDetails = getContactDetails();
+
+  // Filter orders based on search and status - USING SAFE ARRAY
+  const filteredOrders = safeCustomerOrders.filter((order: ApiOrder) => {
     const matchesSearch = order.orderId
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
@@ -159,22 +234,45 @@ const CustomerManagement: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
-  // Calculate tax amount from percentage string
-  const calculateTaxAmount = (taxString: string, subTotal: number): number => {
-    const taxPercentage = parseFloat(taxString.replace('%', '')) || 0;
-    return (subTotal * taxPercentage) / 100;
+  // Calculate tax amount from tax value (could be string, number, or percentage)
+  const calculateTaxAmount = (taxValue: unknown, subTotal: number): number => {
+    // Handle different possible tax value types
+    if (typeof taxValue === 'string') {
+      // If it's a string like "5%" or "5"
+      const cleanString = taxValue.replace('%', '');
+      const taxPercentage = parseFloat(cleanString) || 0;
+      return (subTotal * taxPercentage) / 100;
+    } else if (typeof taxValue === 'number') {
+      // If it's already a number (could be percentage or fixed amount)
+      // Assuming it's a percentage like 5 for 5%
+      return (subTotal * taxValue) / 100;
+    } else {
+      // Fallback for undefined, null, or other types
+      return 0;
+    }
   };
 
   // Calculate discount (you can modify this based on your business logic)
   const calculateDiscount = (subTotal: number): number => {
-    // Default 5% discount for example - adjust based on your needs
     return subTotal * 0.05;
   };
 
   // Convert API order to component order format
   const convertToOrderData = (order: ApiOrder): OrderData & { status: OrderStatus } => {
-    const taxAmount = calculateTaxAmount(order.tax, order.subTotal);
-    const discountAmount = calculateDiscount(order.subTotal);
+    console.log(order,"256")
+    const taxAmount = calculateTaxAmount(order.tax, order.subtotal);
+    const discountAmount = calculateDiscount(order.subtotal);
+
+    // Get tax label based on the tax value type
+    const getTaxLabel = (taxValue: unknown): string => {
+      if (typeof taxValue === 'string') {
+        return taxValue.includes('%') ? taxValue : `${taxValue}%`;
+      } else if (typeof taxValue === 'number') {
+        return `${taxValue}%`;
+      } else {
+        return "0%";
+      }
+    };
 
     return {
       orderId: order.orderId,
@@ -191,17 +289,31 @@ const CustomerManagement: React.FC = () => {
         phone: order.phone,
         address: order.address,
       },
-      items: order.carts.map((cart: CartItem, index: number) => ({
-        id: index + 1,
-        image: cart.image || "/api/placeholder/50/50",
-        brand: cart.brand || "Brand Name",
-        product: cart.product || "Product Name",
-        unitPrice: cart.unitPrice || 0,
-        quantity: cart.quantity || 1,
-        total: cart.total || 0,
-      })),
+      items: order.carts.map((cart: CartItem, index: number) => {
+        // Extract product details from productId and brandId
+        const productName = cart.productId?.name || cart.product || "Product Name";
+        const brandName = cart.productId?.brandId?.name || cart.brand || "Brand Name";
+        const productImage = cart.productId?.image || cart.image || "/api/placeholder/50/50";
+        
+        console.log("Cart item details:", {
+          productName,
+          brandName,
+          productImage,
+          productId: cart.productId
+        });
+
+        return {
+          id: index + 1,
+          image: productImage,
+          brand: brandName,
+          product: productName,
+          unitPrice: cart.unitPrice || 0,
+          quantity: cart.quantity || 1,
+          total: cart.total || 0,
+        };
+      }),
       tax: { 
-        label: order.tax || "0%", 
+        label: getTaxLabel(order.tax), 
         amount: taxAmount
       },
       discount: { 
@@ -209,7 +321,8 @@ const CustomerManagement: React.FC = () => {
         amount: discountAmount
       },
       shippingCost: order.shippingCost || 0,
-      subTotal: order.subTotal || 0,
+      subTotal: order.subtotal || 0,
+      
       payment: { 
         status: order.state === "refunded" ? "Refunded" : 
                 order.state === "delivered" ? "Paid" : "Pending", 
@@ -218,10 +331,11 @@ const CustomerManagement: React.FC = () => {
     };
   };
 
-  if (ordersLoading) {
+  // Show loading state for both orders and profile
+  if (ordersLoading || (safeCustomerOrders.length === 0 && profileLoading)) {
     return (
       <div className="min-h-screen ml-8 text-gray-800 flex items-center justify-center">
-        <div className="text-lg">Loading orders...</div>
+        <div className="text-lg">Loading customer data...</div>
       </div>
     );
   }
@@ -229,9 +343,13 @@ const CustomerManagement: React.FC = () => {
   if (ordersError) {
     return (
       <div className="min-h-screen ml-8 text-gray-800 flex items-center justify-center">
-        <div className="text-lg text-red-500">Error: {ordersError}</div>
+        <div className="text-lg text-red-500">Error loading orders: {ordersError}</div>
       </div>
     );
+  }
+
+  if (profileError) {
+    console.log("Profile error occurred:", profileError);
   }
 
   return (
@@ -312,7 +430,7 @@ const CustomerManagement: React.FC = () => {
           </div>
         </div>
 
-        {/* Orders List */}
+        {/* Orders List - USING FILTERED ORDERS FROM SAFE ARRAY */}
         {filteredOrders.length > 0 ? (
           filteredOrders.map((order: ApiOrder) => (
             <div key={order._id} className="mb-8">
@@ -326,7 +444,7 @@ const CustomerManagement: React.FC = () => {
         ) : (
           <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
             <p className="text-gray-500">
-              {customerOrders.length === 0 ? "No orders found for this customer" : "No orders found matching your filters"}
+              {safeCustomerOrders.length === 0 ? "No orders found for this customer" : "No orders found matching your filters"}
             </p>
           </div>
         )}
