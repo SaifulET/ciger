@@ -28,6 +28,8 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 const router = useRouter()
+
+
   // 🎯 Fetch notifications from backend API
   const fetchNotifications = async () => {
     try {
@@ -35,7 +37,7 @@ const router = useRouter()
       setError(null);
       
       const response = await api.get("/notification/getAllNotifications");
-     
+     console.log('45',response.data,"38")
       if (!response.data) {
         router.push("/auth/signin")
         throw new Error(`Failed to fetch notifications: ${response.status}`);
@@ -61,7 +63,9 @@ const router = useRouter()
 
   // 📥 Load notifications on component mount
   useEffect(() => {
+    
     fetchNotifications();
+    console.log("hellow")
   }, []);
 
   // Refresh data every minute to stay updated

@@ -5,7 +5,8 @@ import { AddSquareIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { useInventoryStore } from '@/app/store/inverntoryStore';
 import { useRouter } from 'next/navigation';
-
+import useUserStore from "@/app/store/userStore"
+import Cookies from "js-cookie";
 export default function InventoryManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -13,9 +14,14 @@ export default function InventoryManagement() {
   
   const { products, getAllProducts, deleteProduct, loading, error } = useInventoryStore();
   const router = useRouter();
-
+const {user,isLogin} = useUserStore()
   // Fetch products on component mount
   useEffect(() => {
+   const token= Cookies.get("token")
+   console.log(token);
+   if(!token){
+    // router.push("/auth/signin")
+   }
     getAllProducts();
   }, [getAllProducts]);
 

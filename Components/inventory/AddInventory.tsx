@@ -152,10 +152,12 @@ const InventoryAddItem = () => {
         alert('Product created successfully!');
         router.push("/pages/inventory");
       } else {
-        alert(result.message || 'Failed to create product');
+        console.log(result,'155')
+        alert(result.message || 'Product already exist');
       }
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create product';
+console.log(err,'158')
+      const errorMessage = err instanceof Error ? err.message : 'Product Already Exist';
       alert(`Failed to create product: ${errorMessage}`);
     }
   };

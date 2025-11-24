@@ -20,6 +20,7 @@ const SignInPage: NextPage = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (user.length>0) {
+      console.log("hellow")
       // router.push("/pages/dashboard");
     }
   }, [user, router]);
@@ -38,21 +39,19 @@ const SignInPage: NextPage = () => {
 
     try {
       const res = await UserLoginRequest(email, password);
-      
-
-      if (res.status === "success") {
+      if(res.status==="success"){
+            console.log("43",res)
+     
         setErrorMessage("");
-        // The redirect will be handled by the useEffect when isLoggedIn changes
-      } else {
-        setErrorMessage(res.message || "Login failed. Please try again.");
+         setIsLoading(false);
+      router.push("/pages/dashboard")
       }
+    
+      
     } catch (error) {
       setErrorMessage("An unexpected error occurred. Please try again.");
       console.error("Login error:", error);
-    } finally {
-      setIsLoading(false);
-      router.push("/pages/dashboard")
-    }
+    } 
   };
 
   const handleCreateAccount = () => {

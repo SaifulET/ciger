@@ -233,8 +233,10 @@ const useUserStore = create<UserStoreState>()(
         console.log("Logging out");
         try {
           const res = await api.post("/admin/signout");
-          // Clear both cookie and store state
+          
+          console.log(res.data,"kdkdk")
           Cookies.remove("token");
+    
           set({ 
             user: "", 
             isLoggedIn: false 

@@ -20,6 +20,7 @@ const Navbar: React.FC = () => {
 
   const router = useRouter();
 const {user} = useUserStore()
+const {UserLogoutRequest}=useUserStore()
 
   const toggleAvatarDropdown = () => {
       setIsAvatarDropdownOpen(!isAvatarDropdownOpen);
@@ -64,15 +65,19 @@ const {user} = useUserStore()
                   >
                    <HugeiconsIcon icon={UserIcon} /> Profile
                   </a>
-                  <a
-                    href="/auth/signin"
-                    className="px-4  py-3 rounded-b-lg hover:bg-yellow-50 hover:text-yellow-600"
-                  >
+                  <button className="px-4  py-3 rounded-b-lg hover:bg-yellow-50 hover:text-yellow-600" onClick={
+                    async() => {
+                      await UserLogoutRequest();
+                      router.push("/auth/signin")
+                    }}>
+                
                     <span className="flex gap-2">
                       {" "}
                       <HugeiconsIcon icon={Logout01Icon} /> Logout
                     </span>
-                  </a>
+        
+                  </button>
+                 
                 </div>
               </div>
             )}
