@@ -46,11 +46,16 @@ const SignInPage: NextPage = () => {
          setIsLoading(false);
       router.push("/pages/dashboard")
       }
+      else{
+           setErrorMessage("Invalid User");
+         setIsLoading(false);
+      }
     
       
     } catch (error) {
       setErrorMessage("An unexpected error occurred. Please try again.");
       console.error("Login error:", error);
+      router.push("/auth/signin")
     } 
   };
 

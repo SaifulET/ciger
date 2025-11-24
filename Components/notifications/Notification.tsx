@@ -39,7 +39,7 @@ const router = useRouter()
       const response = await api.get("/notification/getAllNotifications");
      console.log('45',response.data,"38")
       if (!response.data) {
-        router.push("/auth/signin")
+        // router.push("/auth/signin")
         throw new Error(`Failed to fetch notifications: ${response.status}`);
         
       }
@@ -54,7 +54,7 @@ const router = useRouter()
     } catch (err) {
 
       setError(err instanceof Error ? err.message : "Failed to load notifications");
-       router.push("/auth/signin")
+      //  router.push("/auth/signin")
       console.error("Error fetching notifications:", err);
     } finally {
       setLoading(false);
