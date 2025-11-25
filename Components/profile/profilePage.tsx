@@ -43,6 +43,7 @@ export default function ProfilePage() {
       setLoading(true);
       const response = await api.get('/admin/getAdmin');
       const result = await response.data;
+      console.log(result,"46")
       
       if (result.success) {
         const apiData = result.data;
