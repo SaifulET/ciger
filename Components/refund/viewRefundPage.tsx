@@ -6,6 +6,7 @@ import { ArrowLeft02Icon } from "@hugeicons/core-free-icons";
 import OrderSummary from "@/Components/order/OrderSummary";
 import { useOrderStore, ApiOrder } from '@/app/store/useOrderStore';
 import { useParams, useRouter } from "next/navigation";
+import api from "@/lib/axios";
 
 // ================= TYPES =================
 type OrderStatus = "cancelled" | "delivered" | "shipped" | "processing"|"refunded";
@@ -79,7 +80,7 @@ const OrderDetailsPage: React.FC = () => {
       }
 
       const transformedData: OrderData = {
-        orderId: currentOrder.orderId,
+        orderId: currentOrder._id,
         trackingNo: currentOrder.trackingNo,
         placedOn: new Date(currentOrder.createdAt).toLocaleDateString('en-US', {
           year: 'numeric',
@@ -159,11 +160,23 @@ const OrderDetailsPage: React.FC = () => {
   const navigateToOrders = () => {
     router.push("/pages/refunds");
   };
+ const param = useParams();
+const id = param.id as string;
 
-  const handleRefundToggle = () => {
-    setIsRefunded((prev) => !prev);
-    // Here you would typically call an API to update the refund status
+const handleRefundToggle = async () => {
+  setIsRefunded((prev) => !prev);
+
+  const data = {
+    state: "refunded",
   };
+
+  try {
+    const refunds = await api.put(`/order/updateOrderById/${id}`, data);
+    console.log(refunds, "169");
+  } catch (error) {
+    console.error(error);
+  }
+};
 
   // Loading state
   if (orderLoading || !orderData) {

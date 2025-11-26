@@ -119,10 +119,10 @@ const statusConfig: Record<OrderStatus, StatusConfig> = {
     dotColor: "bg-[#B27B0E]",
   },
   refunded: {
-    bg: "bg-[#FCEAEA]",
-    text: "text-[#DD2C2C]",
-    border: "border-red-200",
-    dotColor: "bg-[#DD2C2C]",
+    bg: "bg-[#E8F1FF]",        // soft light blue background
+  text: "text-[#1E60D4]",    // medium blue text
+  border: "border-blue-200", // light blue border
+  dotColor: "bg-[#1E60D4]",
   },
 };
 
@@ -275,7 +275,7 @@ const CustomerManagement: React.FC = () => {
     };
 
     return {
-      orderId: order.orderId,
+      orderId: order._id,
       trackingNo: order.trackingNo,
       placedOn: new Date(order.date).toLocaleDateString('en-US', { 
         year: 'numeric', 

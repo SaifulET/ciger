@@ -9,7 +9,7 @@ interface Order {
   orderId: string;
   mobile: string;
   payment: string;
-  status: 'Processing' | 'Shipped' | 'Delivered' | 'Canceled';
+  status: 'Processing' | 'Shipped' | 'Delivered' | 'Canceled'|'Refunded';
   _id: string; // Add _id to the interface
 }
 
@@ -26,13 +26,13 @@ const OrderManagement: React.FC = () => {
   }, [fetchAllOrders]);
 
   // Map API status to component status
-  const mapOrderStatus = (state: string): 'Processing' | 'Shipped' | 'Delivered' | 'Canceled' => {
+  const mapOrderStatus = (state: string): 'Processing' | 'Shipped' | 'Delivered' | 'Canceled'|'Refunded' => {
     switch (state) {
       case 'processing': return 'Processing';
       case 'shipped': return 'Shipped';
       case 'delivered': return 'Delivered';
       case 'cancelled': return 'Canceled';
-      case 'refunded': return 'Canceled';
+      case 'refunded': return 'Refunded';
       default: return 'Processing';
     }
   };
@@ -51,7 +51,7 @@ const OrderManagement: React.FC = () => {
 
   const filteredOrders: Order[] = useMemo(() => {
     return allOrders.filter(order =>
-      order.orderId.toLowerCase().includes(searchTerm.toLowerCase())
+      order._id.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [searchTerm, allOrders]);
 
@@ -71,6 +71,8 @@ const OrderManagement: React.FC = () => {
         return 'text-[#29BB7D] bg-[#EAFAF3]';
       case 'Canceled':
         return 'text-[#DD2C2C] bg-[#FCEAEA]';
+      case 'Refunded':
+        return 'text-[#1E60D4] bg-[#E8F1FF]';
       default:
         return 'text-gray-500 bg-gray-50';
     }
@@ -86,6 +88,9 @@ const OrderManagement: React.FC = () => {
         return 'bg-[#29BB7D]'; // Fixed typo: was 'M' instead of 'D'
       case 'Canceled':
         return 'bg-[#DD2C2C]';
+      case 'Refunded':
+        return 'bg-[#1E60D4]';
+
       default:
         return 'bg-gray-400';
     }
@@ -161,7 +166,7 @@ const OrderManagement: React.FC = () => {
               {paginatedOrders.map((order: Order, idx: number) => (
                 <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
                   <td className="px-6 py-4 text-gray-700">{order.no}</td>
-                  <td className="px-6 py-4 font-medium text-gray-900">{order.orderId}</td>
+                  <td className="px-6 py-4 font-medium text-gray-900">{order._id}</td>
                   <td className="px-6 py-4 text-gray-700">{order.mobile}</td>
                   <td className="px-6 py-4 text-gray-700">{order.payment}</td>
                   <td className="px-6 py-4">

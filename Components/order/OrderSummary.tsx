@@ -14,6 +14,7 @@ interface OrderItem {
 }
 
 interface OrderData {
+  _id?:string;
   orderId: string;
   trackingNo: string;
   placedOn: string;

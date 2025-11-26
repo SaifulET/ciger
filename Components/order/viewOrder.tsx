@@ -106,11 +106,11 @@ const OrderDetailsPage: React.FC = () => {
       dotColor: "bg-[#B27B0E]",
     },
     refunded: {
-      bg: "bg-[#FCEAEA]",
-      text: "text-[#DD2C2C]",
-      border: "border-red-200",
-      dotColor: "bg-[#DD2C2C]",
-    },
+  bg: "bg-[#E8F1FF]",        // soft light blue background
+  text: "text-[#1E60D4]",    // medium blue text
+  border: "border-blue-200", // light blue border
+  dotColor: "bg-[#1E60D4]",  // matching blue dot
+},
   };
 
   // Convert API order to OrderSummary format
@@ -139,7 +139,7 @@ const OrderDetailsPage: React.FC = () => {
     const discountAmount = (currentOrder.subtotal * currentOrder.discount) / 100;
 
     return {
-      orderId: currentOrder.orderId,
+      orderId: currentOrder._id,
       trackingNo: currentOrder.trackingNo,
       placedOn: currentOrder.date,
       contact: {
