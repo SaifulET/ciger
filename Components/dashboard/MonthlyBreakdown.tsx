@@ -1,8 +1,7 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ChevronDown,
-  ChevronUp,
   DollarSign,
   RotateCcw,
   Cigarette,
@@ -12,6 +11,7 @@ import {
   Leaf,
   ShoppingBag,
 } from 'lucide-react';
+import api from '@/lib/axios';
 
 interface BreakdownData {
   month: string;
@@ -24,72 +24,6 @@ interface BreakdownData {
   total: number;
   refund: number;
 }
-
-const data: Record<string, Record<string, BreakdownData>> = {
-  January: {
-    2024: {
-      month: 'January',
-      year: '2024',
-      categories: [
-        { id: 'tobacco', name: 'Tobacco Products', amount: 120 },
-        { id: 'hookah', name: 'Hookah', amount: 120 },
-        { id: 'nicotine', name: 'Nicotine Vapes', amount: 120 },
-        { id: 'smokeless', name: 'Smokeless Tobacco', amount: 120 },
-        { id: 'thc', name: 'THC', amount: 120 },
-        { id: 'general', name: 'General Accessories', amount: 120 },
-      ],
-      total: 120,
-      refund: 120,
-    },
-    2025: {
-      month: 'January',
-      year: '2025',
-      categories: [
-        { id: 'tobacco', name: 'Tobacco Products', amount: 150 },
-        { id: 'hookah', name: 'Hookah', amount: 140 },
-        { id: 'nicotine', name: 'Nicotine Vapes', amount: 130 },
-        { id: 'smokeless', name: 'Smokeless Tobacco', amount: 145 },
-        { id: 'thc', name: 'THC', amount: 155 },
-        { id: 'general', name: 'General Accessories', amount: 125 },
-      ],
-      total: 150,
-      refund: 140,
-    },
-  },
-  February: {
-    2024: {
-      month: 'February',
-      year: '2024',
-      categories: [
-        { id: 'tobacco', name: 'Tobacco Products', amount: 100 },
-        { id: 'hookah', name: 'Hookah', amount: 110 },
-        { id: 'nicotine', name: 'Nicotine Vapes', amount: 105 },
-        { id: 'smokeless', name: 'Smokeless Tobacco', amount: 95 },
-        { id: 'thc', name: 'THC', amount: 115 },
-        { id: 'general', name: 'General Accessories', amount: 100 },
-      ],
-      total: 110,
-      refund: 105,
-    },
-    2025: {
-      month: 'February',
-      year: '2025',
-      categories: [
-        { id: 'tobacco', name: 'Tobacco Products', amount: 160 },
-        { id: 'hookah', name: 'Hookah', amount: 150 },
-        { id: 'nicotine', name: 'Nicotine Vapes', amount: 140 },
-        { id: 'smokeless', name: 'Smokeless Tobacco', amount: 155 },
-        { id: 'thc', name: 'THC', amount: 165 },
-        { id: 'general', name: 'General Accessories', amount: 135 },
-      ],
-      total: 160,
-      refund: 150,
-    },
-  },
-};
-
-const months = Object.keys(data);
-const years = ['2024', '2025'];
 
 // Map each category to a unique icon
 const categoryIcons: Record<string, React.ReactNode> = {
@@ -138,11 +72,72 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ label, amount, icon }) => (
 );
 
 export default function MonthlyBreakdown() {
-  const [selectedMonth, setSelectedMonth] = useState(months[0]);
-  const [selectedYear, setSelectedYear] = useState(years[0]);
+  const [data, setData] = useState<Record<string, Record<string, BreakdownData>>>({});
+  const [months, setMonths] = useState<string[]>([]);
+  const [years, setYears] = useState<string[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState('');
+  const [selectedYear, setSelectedYear] = useState('');
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const currentData = data[selectedMonth]?.[selectedYear] || data[months[0]][years[0]];
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get("/dashboard/");
+        console.log(response);
+        const apiData: Record<string, Record<string, BreakdownData>> = response.data.data;
+        
+        setData(apiData);
+        
+        // Extract months and years from the API data
+        const monthsList = Object.keys(apiData);
+        const yearsList = Object.keys(apiData[monthsList[0]] || {});
+        
+        setMonths(monthsList);
+        setYears(yearsList);
+        
+        if (monthsList.length > 0 && yearsList.length > 0) {
+          setSelectedMonth(monthsList[0]);
+          setSelectedYear(yearsList[0]);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        // Set empty state on error
+        setData({});
+        setMonths([]);
+        setYears([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Get current data based on selection
+  const currentData = data[selectedMonth]?.[selectedYear];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100 pl-10 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // if (!currentData && months.length === 0) {
+  //   return (
+  //     <div className="min-h-screen bg-gray-100 pl-10 flex items-center justify-center">
+  //       <div className="text-center">
+  //         <p className="text-gray-600">No data available</p>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="min-h-screen bg-gray-100 pl-10">
@@ -167,11 +162,7 @@ export default function MonthlyBreakdown() {
                 ))}
               </select>
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none transition-transform duration-200">
-                {openDropdown === 'month' ? (
-                  <ChevronDown className="w-4 h-4 text-black rotate-180" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 text-black" />
-                )}
+                <ChevronDown className="w-4 h-4 text-black" />
               </div>
             </div>
 
@@ -191,11 +182,7 @@ export default function MonthlyBreakdown() {
                 ))}
               </select>
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none transition-transform duration-200">
-                {openDropdown === 'year' ? (
-                  <ChevronDown className="w-4 h-4 text-black rotate-180" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 text-black" />
-                )}
+                <ChevronDown className="w-4 h-4 text-black" />
               </div>
             </div>
           </div>
@@ -203,7 +190,7 @@ export default function MonthlyBreakdown() {
 
         {/* Categories Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {currentData.categories.map((category) => (
+          {currentData?.categories.map((category) => (
             <CategoryCard
               key={category.id}
               name={category.name}
@@ -215,8 +202,16 @@ export default function MonthlyBreakdown() {
 
         {/* Total and Refund */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <SummaryCard label="Total" amount={currentData.total} icon={<DollarSign className="text-black" />} />
-          <SummaryCard label="Refund" amount={currentData.refund} icon={<RotateCcw className="text-black" />} />
+          <SummaryCard 
+            label="Total" 
+            amount={currentData?.total || 0} 
+            icon={<DollarSign className="text-black" />} 
+          />
+          <SummaryCard 
+            label="Refund" 
+            amount={currentData?.refund || 0} 
+            icon={<RotateCcw className="text-black" />} 
+          />
         </div>
       </div>
     </div> 

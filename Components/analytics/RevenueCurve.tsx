@@ -1,5 +1,6 @@
 "use client";
 
+import api from "@/lib/axios";
 import { useState, useEffect } from "react";
 
 type ChartData = {
@@ -9,50 +10,9 @@ type ChartData = {
 
 // Dummy backend simulation (replace with API call)
 const fetchRevenueData = async (year: string): Promise<ChartData[]> => {
-  const data: Record<string, ChartData[]> = {
-    "2023": [
-      { month: "JAN", value: 50 },
-      { month: "FEB", value: 40 },
-      { month: "MAR", value: 30 },
-      { month: "APR", value: 60 },
-      { month: "MAY", value: 70 },
-      { month: "JUN", value: 80 },
-      { month: "JUL", value: 55 },
-      { month: "AUG", value: 65 },
-      { month: "SEP", value: 40 },
-      { month: "OCT", value: 75 },
-      { month: "NOV", value: 50 },
-      { month: "DEC", value: 90 },
-    ],
-    "2024": [
-      { month: "JAN", value: 70 },
-      { month: "FEB", value: 55 },
-      { month: "MAR", value: 60 },
-      { month: "APR", value: 50 },
-      { month: "MAY", value: 85 },
-      { month: "JUN", value: 65 },
-      { month: "JUL", value: 75 },
-      { month: "AUG", value: 80 },
-      { month: "SEP", value: 70 },
-      { month: "OCT", value: 95 },
-      { month: "NOV", value: 60 },
-      { month: "DEC", value: 100 },
-    ],
-    "2025": [
-      { month: "JAN", value: 60 },
-      { month: "FEB", value: 30 },
-      { month: "MAR", value: 50 },
-      { month: "APR", value: 40 },
-      { month: "MAY", value: 70 },
-      { month: "JUN", value: 20 },
-      { month: "JUL", value: 60 },
-      { month: "AUG", value: 50 },
-      { month: "SEP", value: 30 },
-      { month: "OCT", value: 80 },
-      { month: "NOV", value: 55 },
-      { month: "DEC", value: 45 },
-    ],
-  };
+  const response = await api.get("/dashboard/yearly");
+  console.log(response)
+  const data: Record<string, ChartData[]> =response.data.data 
   return data[year] || [];
 };
 
@@ -81,10 +41,12 @@ export default function RevenueChart() {
           onChange={(e) => setYear(e.target.value)}
           className="bg-[#FFCF00] border-2 border-[#212121] rounded-full px-3 py-1 text-xs font-medium text-[#212121] cursor-pointer"
         >
-          <option>2023</option>
-          <option>2024</option>
+         
           <option>2025</option>
           <option>2026</option>
+          <option>2027</option>
+          <option>2028</option>
+
         </select>
       </div>
 

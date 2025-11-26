@@ -13,6 +13,7 @@ import {
   Logout01Icon,
   UserIcon,
 } from "@hugeicons/core-free-icons";
+import Link from "next/link";
 
 
 const Navbar: React.FC = () => {
@@ -34,6 +35,7 @@ const {UserLogoutRequest}=useUserStore()
   return (
     <div className="p-0  md:relative   md:left-1/2 md:transform md:-translate-x-1/2  md:h-[116px] w-full bg-[#F5F5F5] text-gray-800">
       <nav className="flex justify-between m-0 p-0 items-center px-4 md:px-16 py-4 md:py-8 w-full h-full bg-[#ffffff]">
+       
        
         <Image src={logo} alt="logo"  width={150} height={150} className="rounded-full " />
 

@@ -7,7 +7,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import { Analytics01Icon, BrandfetchIcon, Calendar03Icon, DashboardSquare01Icon, Image01Icon, Logout01Icon, Money04Icon, MoneyBag01Icon, Notification01Icon, PackageIcon, PencilEdit02Icon, UserGroupIcon, UserIcon } from "@hugeicons/core-free-icons";
+import { Analytics01Icon, BrandfetchIcon, Calendar03Icon, DashboardSquare01Icon, Discount01Icon, Image01Icon, Logout01Icon, Money04Icon, MoneyBag01Icon, Notification01Icon, PackageIcon, PencilEdit02Icon, UserGroupIcon, UserIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 // ✅ Define proper TypeScript interfaces
@@ -48,7 +48,7 @@ const menu: MenuStructure = {
   ],
   pricing: [
     { label: "Service Pricing", icon: <HugeiconsIcon icon={Money04Icon} />, path: "/pages/servicePricing" },
-    { label: "Discount Code", icon: <HugeiconsIcon icon={Money04Icon} />, path: "/pages/discountCode" },
+    { label: "Discount Code", icon: <HugeiconsIcon icon={Discount01Icon} />, path: "/pages/discountCode" },
   ],
   personal: [
     { label: "Profile", icon: <HugeiconsIcon icon={UserIcon} />, path: "/pages/profile" },
