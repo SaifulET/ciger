@@ -140,7 +140,7 @@ export default function MonthlyBreakdown() {
   // }
 
   return (
-    <div className="min-h-screen bg-gray-100 pl-10">
+    <div className="min-h-screen bg-gray-100 pl-10 ">
       <div className="w-full">
         {/* Header */}
         <div className="flex items-center justify-between p-10 mb-8 bg-white rounded-lg">

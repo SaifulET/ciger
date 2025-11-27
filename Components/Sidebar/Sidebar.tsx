@@ -183,7 +183,7 @@ const Sidebar = () => {
   };
 
   const SidebarContent = () => (
-    <aside className="w-full sm:w-72 md:w-80 lg:w-[336px] min-h-screen flex flex-col gap-6 p-4 bg-white shadow-sm font-[Poppins] rounded-lg ">
+    <aside className="w-full min-h-screen flex flex-col gap-6 p-4 bg-white shadow-sm font-[Poppins] rounded-lg text-gray-800 ">
       <Section title="Main">{menu.main.map((item) => renderItem(item))}</Section>
       <Section title="Resource & Order Management">
         {menu.resourceOrderManagement.map((item) => renderItem(item))}
@@ -198,12 +198,12 @@ const Sidebar = () => {
   );
 
   return (
-    <div className="relative">
+    <div className="relative text-gray-800">
       <div className="sm:hidden p-4 flex justify-between items-center bg-white shadow-md">
         <button onClick={() => setIsOpen(!isOpen)}>
           {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
-        <span className="font-bold">My App</span>
+        <span className="font-bold"></span>
       </div>
 
       <div className={`rounded-lg fixed top-0 left-0 h-full z-40 transform bg-white sm:static sm:translate-x-0 transition-transform duration-300 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}>
