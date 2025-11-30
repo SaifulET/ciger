@@ -11,7 +11,7 @@ const BrandCreate: React.FC = () => {
   const [brandName, setBrandName] = useState('');
   const [brandImage, setBrandImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
-  const [feature, setFeature] = useState(true);
+  const [feature, setFeature] = useState(false);
   const [canSave, setCanSave] = useState(false);
 
   // 🔹 Enable save only if brandName is filled
