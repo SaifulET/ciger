@@ -28,8 +28,7 @@ export interface Brand {
   _id: string;
   name: string;
   image?: string;
-  feature?:boolean;
-
+  feature?: boolean;
   createdAt: string;
   updatedAt: string;
   __v?: number;
@@ -44,27 +43,27 @@ export interface ProductFormData {
   productStock: string;
   productPrice: string;
   productSalePrice: string;
-  productState: string | null;
+  productState: string[] | null;
   productDescription: string;
-  selectedImages: ProductImage[];  // Changed to array for multiple images
+  selectedImages: ProductImage[];
   existingImages: string[];
 }
 
 export interface ApiResponse {
   success: boolean;
-  data?: Product | Product[] | Brand[]; 
+  data?: Product | Product[] | Brand[];
   count?: number;
   message?: string;
 }
 
 export const categoriesData = [
-  { "label": "Tobacco Products", "subItems": ["Cigar", "Premium Cigar","Pipe Tobacco"] },
+  { "label": "Tobacco Products", "subItems": ["Cigar", "Premium Cigar", "Pipe Tobacco"] },
   { "label": "Hookah", "subItems": ["Hookah Pipes", "Hookah Tobacco"] },
   { "label": "Nicotine Vapes", "subItems": ["Disposables"] },
   { "label": "Smokeless Tobacco", "subItems": ["Chewing Tobacco", "Snuff", "Nicotine Pouches", "Snus"] },
-  { "label": "General Accessories", "subItems": ["Lighters & Torch Lighters", "Ashtrays", "Tolling Machines", "Storage & Cases", "Cleaning Tools"] },
+  { "label": "General Accessories", "subItems": ["Lighters & Torch Lighters", "Ashtrays", "Rolling Machines", "Storage & Cases", "Cleaning Tools"] },
   { "label": "THC", "subItems": ["Flowers", "PreRolls", "Disposables/Cartridges", "Edibles", "Concentrates"] },
-  { "label": "Roll Your Own", "subItems": ["Tubes", "Wraps", "Rolling Papers","Pre-Rolled Cones"] }
+  { "label": "Roll Your Own", "subItems": ["Tubes", "Wraps", "Rolling Papers", "Pre-Rolled Cones"] }
 ];
 
 export const categories = categoriesData.map(cat => cat.label);

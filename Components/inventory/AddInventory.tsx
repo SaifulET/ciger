@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import 'quill/dist/quill.snow.css';
 import { useQuill } from 'react-quilljs';
 import { useInventoryStore } from '@/app/store/inverntoryStore';
-import { categories, subCategories, ProductFormData, ProductImage } from'./inventory';
+import { categories, subCategories, ProductFormData, ProductImage } from './inventory';
 
 const InventoryAddItem = () => {
   const [formData, setFormData] = useState<ProductFormData>({
@@ -87,10 +87,24 @@ const InventoryAddItem = () => {
   };
 
   const handleProductState = (state: string) => {
-    setFormData(prev => ({
-      ...prev,
-      productState: prev.productState === state ? null : state,
-    }));
+    setFormData(prev => {
+      const currentState = prev.productState;
+      
+      // If current state is null, initialize with the selected state
+      if (currentState === null) {
+        return { ...prev, productState: [state] };
+      }
+      
+      // If state already exists, remove it (could become empty array)
+      if (currentState.includes(state)) {
+        const newState = currentState.filter(s => s !== state);
+        // If array becomes empty, set to null
+        return { ...prev, productState: newState.length > 0 ? newState : null };
+      }
+      
+      // Add the new state
+      return { ...prev, productState: [...currentState, state] };
+    });
   };
 
   const handleImageSelect = () => {
@@ -156,7 +170,7 @@ const InventoryAddItem = () => {
         alert(result.message || 'Product already exist');
       }
     } catch (err: unknown) {
-console.log(err,'158')
+      console.log(err,'158')
       const errorMessage = err instanceof Error ? err.message : 'Product Already Exist';
       alert(`Failed to create product: ${errorMessage}`);
     }
@@ -402,7 +416,7 @@ console.log(err,'158')
               <button
                 onClick={() => handleProductState('newArrivals')}
                 className={`px-4 py-2 rounded-lg font-medium transition ${
-                  formData.productState === 'newArrivals'
+                  formData.productState?.includes('newArrivals')
                     ? 'bg-[#C9A040] text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
@@ -412,7 +426,7 @@ console.log(err,'158')
               <button
                 onClick={() => handleProductState('bestSeller')}
                 className={`px-4 py-2 rounded-lg font-medium transition ${
-                  formData.productState === 'bestSeller'
+                  formData.productState?.includes('bestSeller')
                     ? 'bg-[#C9A040] text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}

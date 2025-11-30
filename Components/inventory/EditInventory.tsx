@@ -107,6 +107,11 @@ const InventoryEditItem = () => {
     if (currentProduct && currentProduct._id === productId && !isInitialDataLoaded) {
       console.log('Setting form data for product:', currentProduct.name);
       
+      // Determine product states based on isNew and isBest
+      const productStates: string[] = [];
+      if (currentProduct.isNew) productStates.push('newArrivals');
+      if (currentProduct.isBest) productStates.push('bestSeller');
+      
       setFormData({
         category: currentProduct.category || '',
         subCategory: currentProduct.subCategory || '',
@@ -116,7 +121,7 @@ const InventoryEditItem = () => {
         productStock: currentProduct.available?.toString() || '',
         productPrice: currentProduct.price?.toString() || '',
         productSalePrice: currentProduct.discount?.toString() || '',
-        productState: currentProduct.isNew ? 'newArrivals' : currentProduct.isBest ? 'bestSeller' : null,
+        productState: productStates.length > 0 ? productStates : null,
         productDescription: currentProduct.description || '',
         selectedImages: [],
         existingImages: currentProduct.images || [],
@@ -173,10 +178,24 @@ const InventoryEditItem = () => {
   };
 
   const handleProductState = (state: string) => {
-    setFormData(prev => ({
-      ...prev,
-      productState: prev.productState === state ? null : state,
-    }));
+    setFormData(prev => {
+      const currentState = prev.productState;
+      
+      // If current state is null, initialize with the selected state
+      if (currentState === null) {
+        return { ...prev, productState: [state] };
+      }
+      
+      // If state already exists, remove it (could become empty array)
+      if (currentState.includes(state)) {
+        const newState = currentState.filter(s => s !== state);
+        // If array becomes empty, set to null
+        return { ...prev, productState: newState.length > 0 ? newState : null };
+      }
+      
+      // Add the new state
+      return { ...prev, productState: [...currentState, state] };
+    });
   };
 
   const handleImageSelect = () => fileInputRef.current?.click();
@@ -533,7 +552,7 @@ const InventoryEditItem = () => {
               <button
                 onClick={() => handleProductState('newArrivals')}
                 className={`px-4 py-2 rounded-lg font-medium transition ${
-                  formData.productState === 'newArrivals'
+                  formData.productState?.includes('newArrivals')
                     ? 'bg-[#C9A040] text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
@@ -543,7 +562,7 @@ const InventoryEditItem = () => {
               <button
                 onClick={() => handleProductState('bestSeller')}
                 className={`px-4 py-2 rounded-lg font-medium transition ${
-                  formData.productState === 'bestSeller'
+                  formData.productState?.includes('bestSeller')
                     ? 'bg-[#C9A040] text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}

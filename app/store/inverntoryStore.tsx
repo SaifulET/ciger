@@ -87,13 +87,8 @@ export const useInventoryStore = create<InventoryState>()(
          const response = await api.get(`/product/getProductById/${id}`);
          const brand = response.data.data.brandId.name;
 
-
-response.data.data.brand = brand;
-const apiResponse: SingleProductResponse = response.data;
-
-
-
-
+         response.data.data.brand = brand;
+         const apiResponse: SingleProductResponse = response.data;
           
           if (apiResponse.success && apiResponse.data) {
             set({ currentProduct: apiResponse.data, loading: false });
@@ -117,8 +112,13 @@ const apiResponse: SingleProductResponse = response.data;
           formData.append('discount', productData.productSalePrice);
           formData.append('available', productData.productStock);
           formData.append('quantity', productData.productQuantity);
-          formData.append('isBest', (productData.productState === 'bestSeller').toString());
-          formData.append('isNew', (productData.productState === 'newArrivals').toString());
+          
+          // Handle null and array states
+          const isBest = productData.productState?.includes('bestSeller') || false;
+          const isNew = productData.productState?.includes('newArrivals') || false;
+          
+          formData.append('isBest', isBest.toString());
+          formData.append('isNew', isNew.toString());
           formData.append('isInStock', (parseInt(productData.productStock) > 0).toString());
           formData.append('description', productData.productDescription);
           
@@ -168,8 +168,13 @@ const apiResponse: SingleProductResponse = response.data;
           formData.append('discount', productData.productSalePrice);
           formData.append('available', productData.productStock);
           formData.append('quantity', productData.productQuantity);
-          formData.append('isBest', (productData.productState === 'bestSeller').toString());
-          formData.append('isNew', (productData.productState === 'newArrivals').toString());
+          
+          // Handle null and array states
+          const isBest = productData.productState?.includes('bestSeller') || false;
+          const isNew = productData.productState?.includes('newArrivals') || false;
+          
+          formData.append('isBest', isBest.toString());
+          formData.append('isNew', isNew.toString());
           formData.append('isInStock', (parseInt(productData.productStock) > 0).toString());
           formData.append('description', productData.productDescription);
           
