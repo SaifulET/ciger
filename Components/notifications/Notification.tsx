@@ -6,12 +6,14 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Clock, Check, AlertCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 type Notification = {
   id: string;
   userId: string;
   userName: string;
   message: string;
   orderId?: string;
+  linkId?:string;
   orderid?: string;
   timestamp: string; // API provides formatted timestamp
   status: "placed" | "delivered" | "cancelled" | "shipped";
@@ -29,7 +31,7 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 const router = useRouter()
-
+console.log(notifications,"34")
 
   // 🎯 Fetch notifications from backend API
   const fetchNotifications = async () => {
@@ -149,25 +151,30 @@ const router = useRouter()
             
             <div
               key={notif.id}
-              className="flex items-start gap-4 border border-gray-200 rounded-lg p-4 hover:shadow-sm transition"
+            
             >
-              {/* Icon */}
+              <Link href={`/pages/order/viewOrder/${notif.linkId}`}  className="flex items-start gap-4 border border-gray-200 rounded-lg p-4 hover:shadow-sm transition" >
+              
+               {/* Icon */}
               {getIcon(notif.status)}
 
               {/* Text */}
               <div className="flex flex-col">
                 <p className="font-semibold text-sm md:text-base">
-                  {notif.userName}s {notif.message}
+                   {notif.message}
                 </p>
-                {notif.orderid && (
+                {notif.orderId && (
                   <p className="text-gray-500 text-sm mt-1">
-                    Order ID: {notif.orderid}
+                    Order ID: {notif.orderId}
                   </p>
                 )}
                 <p className="text-gray-400 text-xs mt-1">
                   {formatTimeAgo(notif.timestamp)}
                 </p>
               </div>
+              
+              </Link>
+             
             </div>
           ))}
         </div>

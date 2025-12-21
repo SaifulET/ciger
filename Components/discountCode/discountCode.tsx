@@ -5,12 +5,16 @@ import { PencilEdit02Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { useRouter } from 'next/navigation';
 import { useDiscountCodeStore } from '@/app/store/discountCodeStore';
-
+import Cookies from "js-cookie";
 export default function DiscountCodePage() {
+   const router = useRouter();
+  useEffect(()=>{
+      Cookies.get("token")?"":router.push("/auth/signin")
+    },[Cookies.get("token")])
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   
-  const router = useRouter();
+  
   const { discountCodes, loading, fetchDiscountCodes, deleteDiscountCodeById } = useDiscountCodeStore();
 
   useEffect(() => {

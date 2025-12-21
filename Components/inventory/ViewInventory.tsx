@@ -11,6 +11,7 @@ const InventoryViewItem = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const productId = searchParams.get('id');
+  const returnPage = searchParams.get('page') || '1'; // Get the page parameter
   
   const { 
     currentProduct, 
@@ -44,7 +45,8 @@ const InventoryViewItem = () => {
     if (confirmDelete) {
       const result = await deleteProduct(productId);
       if (result.success) {
-        router.push('/pages/inventory');
+        // Redirect back to inventory with the same page
+        router.push(`/pages/inventory?page=${returnPage}`);
       } else {
         alert(result.message || 'Failed to delete product');
       }
@@ -53,7 +55,8 @@ const InventoryViewItem = () => {
 
   const handleEdit = () => {
     if (productId) {
-      router.push(`/pages/inventory/editItem?id=${productId}`);
+      // Pass current page when navigating to edit item
+      router.push(`/pages/inventory/editItem?id=${productId}&page=${returnPage}`);
     }
   };
 
@@ -63,7 +66,7 @@ const InventoryViewItem = () => {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-800 mb-4">Product Not Found</h1>
           <p className="text-gray-600">No product ID provided.</p>
-          <Link href="/pages/inventory" className="text-[#C9A040] hover:underline mt-4 inline-block">
+          <Link href={`/pages/inventory?page=${returnPage}`} className="text-[#C9A040] hover:underline mt-4 inline-block">
             Back to Inventory
           </Link>
         </div>
@@ -87,7 +90,7 @@ const InventoryViewItem = () => {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-800 mb-4">Error</h1>
           <p className="text-gray-600">{error}</p>
-          <Link href="/pages/inventory" className="text-[#C9A040] hover:underline mt-4 inline-block">
+          <Link href={`/pages/inventory?page=${returnPage}`} className="text-[#C9A040] hover:underline mt-4 inline-block">
             Back to Inventory
           </Link>
         </div>
@@ -101,7 +104,7 @@ const InventoryViewItem = () => {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-800 mb-4">Product Not Found</h1>
           <p className="text-gray-600">The requested product could not be found.</p>
-          <Link href="/pages/inventory" className="text-[#C9A040] hover:underline mt-4 inline-block">
+          <Link href={`/pages/inventory?page=${returnPage}`} className="text-[#C9A040] hover:underline mt-4 inline-block">
             Back to Inventory
           </Link>
         </div>
@@ -114,7 +117,7 @@ const InventoryViewItem = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-8 py-6 rounded-lg bg-white">
         <div className="flex items-center gap-3">
-          <Link href="/pages/inventory" className="flex pl-5">
+          <Link href={`/pages/inventory?page=${returnPage}`} className="flex pl-5"> {/* Include page in link */}
             <button className="hover:text-gray-900">
               <HugeiconsIcon icon={ArrowLeft02Icon} />
             </button>

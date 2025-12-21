@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronDown, ChevronUp } from "lucide-react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft02Icon } from "@hugeicons/core-free-icons";
 import OrderSummary from "@/Components/order/OrderSummary";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation"; // Add useSearchParams
 import { useOrderStore } from "@/app/store/useOrderStore";
 import api from "@/lib/axios";
 
@@ -40,6 +40,7 @@ interface OrderData {
   orderid?: string;
   trackingNo: string;
   placedOn: string;
+  transactionId: string;
   contact: ContactDetails;
   items: OrderItem[];
   tax: { label: string; amount: number };
@@ -56,8 +57,11 @@ const OrderDetailsPage: React.FC = () => {
   const [trackingNumber, setTrackingNumber] = useState("");
 
   const params = useParams();
-  const orderId = params.id as string;
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnPage = searchParams.get('page') || '1'; // Get the page parameter
+  
+  const orderId = params.id as string;
 
   const { 
     currentOrder, 
@@ -108,11 +112,11 @@ const OrderDetailsPage: React.FC = () => {
       dotColor: "bg-[#B27B0E]",
     },
     refunded: {
-  bg: "bg-[#E8F1FF]",        // soft light blue background
-  text: "text-[#1E60D4]",    // medium blue text
-  border: "border-blue-200", // light blue border
-  dotColor: "bg-[#1E60D4]",  // matching blue dot
-},
+      bg: "bg-[#E8F1FF]",
+      text: "text-[#1E60D4]",
+      border: "border-blue-200",
+      dotColor: "bg-[#1E60D4]",
+    },
   };
 
   // Convert API order to OrderSummary format
@@ -120,7 +124,7 @@ const OrderDetailsPage: React.FC = () => {
     if (!currentOrder) {
       return {
         orderId: "",
-        orderid:"",
+        orderid: "",
         trackingNo: "",
         placedOn: "",
         contact: { name: "", email: "", phone: "", address: "" },
@@ -129,6 +133,7 @@ const OrderDetailsPage: React.FC = () => {
         discount: { label: "0%", amount: 0 },
         shippingCost: 0,
         subTotal: 0,
+        transactionId: "",
         payment: { status: "Pending", amount: 0 },
       };
     }
@@ -168,9 +173,10 @@ const OrderDetailsPage: React.FC = () => {
         label: `${currentOrder.discount}%`, 
         amount: discountAmount 
       },
-      orderid:currentOrder.orderid,
+      orderid: currentOrder.orderid,
       shippingCost: currentOrder.shippingCost,
       subTotal: currentOrder.subtotal,
+      transactionId: currentOrder.transactionId,
       payment: { 
         status: mapPaymentStatus(currentOrder.state), 
         amount: currentOrder.total 
@@ -194,14 +200,14 @@ const OrderDetailsPage: React.FC = () => {
   };
 
   const handleStatusChange = async (status: OrderStatus) => {
-    const statusChange= await api.post("/mail/refundConfirmation", {
-          email:currentOrder?.email,
-          orderId: currentOrder?.orderid,
-          transactionId: currentOrder?.transactionId,
-          Amount: currentOrder?.total,
-          status:status,
-        });
-        console.log(currentOrder,statusChange,"185")
+    const statusChange = await api.post("/mail/refundConfirmation", {
+      email: currentOrder?.email,
+      orderId: currentOrder?.orderid,
+      transactionId: currentOrder?.transactionId,
+      Amount: currentOrder?.total,
+      status: status,
+    });
+    console.log(currentOrder, statusChange, "185");
 
     setOrderStatus(status);
     setIsDropdownOpen(false);
@@ -218,7 +224,8 @@ const OrderDetailsPage: React.FC = () => {
   };
 
   const navigateToOrders = () => {
-    router.push("/pages/order");
+    // Go back to orders list with the same page
+    router.push(`/pages/order?page=${returnPage}`);
   };
 
   if (orderLoading) {
@@ -233,6 +240,12 @@ const OrderDetailsPage: React.FC = () => {
     return (
       <div className="min-h-screen ml-8 text-gray-800 flex items-center justify-center">
         <div className="text-lg text-red-500">Error: {orderError}</div>
+        <button
+          onClick={navigateToOrders}
+          className="mt-4 px-6 py-2 bg-[#C9A040] text-white rounded-lg hover:bg-[#9e7e33] transition"
+        >
+          Back to Orders
+        </button>
       </div>
     );
   }
@@ -241,6 +254,12 @@ const OrderDetailsPage: React.FC = () => {
     return (
       <div className="min-h-screen ml-8 text-gray-800 flex items-center justify-center">
         <div className="text-lg">Order not found</div>
+        <button
+          onClick={navigateToOrders}
+          className="mt-4 px-6 py-2 bg-[#C9A040] text-white rounded-lg hover:bg-[#9e7e33] transition"
+        >
+          Back to Orders
+        </button>
       </div>
     );
   }

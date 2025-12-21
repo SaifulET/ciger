@@ -12,6 +12,8 @@ import {
   ShoppingBag,
 } from 'lucide-react';
 import api from '@/lib/axios';
+import Cookies from "js-cookie";
+import {useRouter} from "next/navigation"
 
 interface BreakdownData {
   month: string;
@@ -79,6 +81,13 @@ export default function MonthlyBreakdown() {
   const [selectedYear, setSelectedYear] = useState('');
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+
+
+   const router = useRouter()
+    useEffect(()=>{
+      Cookies.get("token")?"":router.push("/auth/signin")
+    },[Cookies.get("token")])
 
   useEffect(() => {
     const fetchData = async () => {

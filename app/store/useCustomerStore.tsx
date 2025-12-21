@@ -42,6 +42,8 @@ interface ApiOrder {
   email: string;
   phone: string;
   orderId: string;
+  orderid: string;
+ transactionId: string;
   trackingNo: string;
   state: "processing" | "shipped" | "delivered" | "cancelled" | "refunded";
   userId: string;
@@ -201,7 +203,7 @@ export const useCustomerStore = create<CustomerStore>((set) => ({
         const ordersData = extractOrdersData(data);
         
         console.log("Processed orders data:", ordersData);
-        console.log("First order carts structure:", ordersData[0]?.carts?.[0]);
+        // console.log("First order carts structure:", ordersData[0]?.carts?.[0]);
         
         set({ customerOrders: ordersData, ordersLoading: false });
       } else {

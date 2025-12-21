@@ -4,26 +4,45 @@ import { Search, Edit, Eye, Trash2, ChevronLeft, ChevronRight } from 'lucide-rea
 import { AddSquareIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { useInventoryStore } from '@/app/store/inverntoryStore';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation'; // Add useSearchParams
 import useUserStore from "@/app/store/userStore"
 import Cookies from "js-cookie";
+
 export default function InventoryManagement() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
+  
+  // Use URL search params to get and set page
+  const searchParams = useSearchParams();
+  const urlPage = searchParams.get('page');
+  
+  // Initialize currentPage from URL or default to 1
+  const [currentPage, setCurrentPage] = useState(
+    urlPage ? parseInt(urlPage) : 1
+  );
   
   const { products, getAllProducts, deleteProduct, loading, error } = useInventoryStore();
   const router = useRouter();
-const {user,isLogin} = useUserStore()
+  const {user, isLogin} = useUserStore();
+
   // Fetch products on component mount
   useEffect(() => {
-   const token= Cookies.get("token")
-   console.log(token);
-   if(!token){
-    // router.push("/auth/signin")
-   }
     getAllProducts();
   }, [getAllProducts]);
+
+  // Update URL when page changes
+  useEffect(() => {
+    if (currentPage > 1) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('page', currentPage.toString());
+      router.push(`?${params.toString()}`, { scroll: false });
+    } else if (currentPage === 1 && urlPage) {
+      // Remove page param if it's page 1
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('page');
+      router.push(`?${params.toString()}`, { scroll: false });
+    }
+  }, [currentPage, router, searchParams, urlPage]);
 
   // Filter data based on search
   const filteredData = useMemo(() => {
@@ -36,6 +55,10 @@ const {user,isLogin} = useUserStore()
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
+
+    useEffect(()=>{
+      Cookies.get("token")?"":router.push("/auth/signin")
+    },[Cookies.get("token")])
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this item?')) {
@@ -55,15 +78,18 @@ const {user,isLogin} = useUserStore()
   };
 
   const handleAddItem = () => {
-    router.push('/pages/inventory/addItem');
+    // Pass current page when navigating to add item
+    router.push(`/pages/inventory/addItem?page=${currentPage}`);
   };
 
   const handleViewItem = (id: string) => {
-    router.push(`/pages/inventory/viewItem?id=${id}`);
+    // Pass current page when navigating to view item
+    router.push(`/pages/inventory/viewItem?id=${id}&page=${currentPage}`);
   };
 
   const handleEditItem = (id: string) => {
-    router.push(`/pages/inventory/editItem?id=${id}`);
+    // Pass current page when navigating to edit item
+    router.push(`/pages/inventory/editItem?id=${id}&page=${currentPage}`);
   };
 
   const getPaginationButtons = (): number[] => {

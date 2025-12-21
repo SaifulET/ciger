@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { PencilEdit02Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { useBlogStore } from '@/app/store/blogStore';
-
+import Cookies from "js-cookie";
 interface BlogCardProps {
   id: string;
   image: string;
@@ -73,6 +73,9 @@ const BlogManagement: React.FC = () => {
   const handleCreateBlog = () => {
     router.push('/pages/blogs/create');
   };
+    useEffect(()=>{
+      Cookies.get("token")?"":router.push("/auth/signin")
+    },[Cookies.get("token")])
 
   return (
     <div className="min-h-screen  ml-8 text-gray-800">
@@ -93,7 +96,7 @@ const BlogManagement: React.FC = () => {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C9A040]"></div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-6">
             {blogs.map((blog) => (
               <BlogCard
                 key={blog._id}

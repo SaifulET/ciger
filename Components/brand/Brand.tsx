@@ -4,15 +4,40 @@ import { Pencil, Eye, Trash2 } from 'lucide-react';
 import { PencilEdit02Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { useBrandStore } from '@/app/store/brandStore';
-
+import { useRouter, useSearchParams } from 'next/navigation'; // Add useSearchParams
+import Cookies from "js-cookie";
 const BrandManagement: React.FC = () => {
   const { brands, loading, error, fetchBrands, deleteBrand } = useBrandStore();
-  const [currentPage, setCurrentPage] = useState(1);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlPage = searchParams.get('page');
+ useEffect(()=>{
+      Cookies.get("token")?"":router.push("/auth/signin")
+    },[Cookies.get("token")])
+  
+  // Initialize currentPage from URL or default to 1
+  const [currentPage, setCurrentPage] = useState(
+    urlPage ? parseInt(urlPage) : 1
+  );
   const itemsPerPage = 8;
 
   useEffect(() => {
     fetchBrands();
   }, [fetchBrands]);
+
+  // Update URL when page changes
+  useEffect(() => {
+    if (currentPage > 1) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('page', currentPage.toString());
+      router.push(`?${params.toString()}`, { scroll: false });
+    } else if (currentPage === 1 && urlPage) {
+      // Remove page param if it's page 1
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('page');
+      router.push(`?${params.toString()}`, { scroll: false });
+    }
+  }, [currentPage, router, searchParams, urlPage]);
 
   // Calculate pagination
   const totalPages = Math.ceil(brands.length / itemsPerPage);
@@ -47,15 +72,18 @@ const BrandManagement: React.FC = () => {
   };
 
   const handleAddBrand = () => {
-    window.location.href = '/pages/brand/create';
+    // Pass current page when navigating to create brand
+    router.push(`/pages/brand/create?page=${currentPage}`);
   };
 
   const handleView = (id: string) => {
-    window.location.href = `/pages/brand/view/${id}`;
+    // Pass current page when navigating to view brand
+    router.push(`/pages/brand/view/${id}?page=${currentPage}`);
   };
 
   const handleEdit = (id: string) => {
-    window.location.href = `/pages/brand/edit/${id}`;
+    // Pass current page when navigating to edit brand
+    router.push(`/pages/brand/edit/${id}?page=${currentPage}`);
   };
 
   const goToPage = (page: number) => {

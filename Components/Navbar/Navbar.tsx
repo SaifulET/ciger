@@ -18,6 +18,7 @@ import Link from "next/link";
 
 
 const Navbar: React.FC = () => {
+   
   const [isAvatarDropdownOpen, setIsAvatarDropdownOpen] = useState(false);
 
   const router = useRouter();
@@ -28,7 +29,9 @@ const {UserLogoutRequest}=useUserStore()
       setIsAvatarDropdownOpen(!isAvatarDropdownOpen);
     
   };
- 
+  useEffect(()=>{
+      Cookies.get("token")?"":router.push("/auth/signin")
+    },[Cookies.get("token")])
 
   
 
@@ -38,7 +41,7 @@ const {UserLogoutRequest}=useUserStore()
       <nav className="flex justify-between m-0 p-0 items-center px-4 md:px-16 py-4 md:py-8 w-full h-full bg-[#ffffff]">
        
        
-        <Image src={logo} alt="logo"  width={150} height={150} className="" />
+        <Link href="/pages/dashboard"><Image src={logo} alt="logo"  width={150} height={150} className="" /></Link>
 
         {/* Desktop + Medium Menu */}
         <div className="hidden md:flex items-center gap-16 lg:gap-18 w-auto ">

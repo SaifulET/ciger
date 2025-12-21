@@ -1,9 +1,9 @@
 import CustomerManagement from '@/Components/customer/CustomerPage'
-import React from 'react'
+import React, { Suspense } from 'react'
 
 function page() {
   return (
-    <div><CustomerManagement/></div>
+   <Suspense fallback={<div>Loading inventory...</div>}><CustomerManagement/></Suspense>
   )
 }
 

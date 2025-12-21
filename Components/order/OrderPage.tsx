@@ -1,7 +1,7 @@
 'use client'
 import { useState, useMemo, useEffect } from 'react';
 import { Eye, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation'; // Add useSearchParams
 import { useOrderStore } from '@/app/store/useOrderStore';
 
 interface Order {
@@ -15,15 +15,37 @@ interface Order {
 
 const OrderManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage: number = 8;
+  
+  // Use URL search params to get and set page
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const urlPage = searchParams.get('page');
+  
+  // Initialize currentPage from URL or default to 1
+  const [currentPage, setCurrentPage] = useState<number>(
+    urlPage ? parseInt(urlPage) : 1
+  );
 
   const { orders, ordersLoading, ordersError, fetchAllOrders } = useOrderStore();
-  const router = useRouter();
 
   useEffect(() => {
     fetchAllOrders();
   }, [fetchAllOrders]);
+
+  // Update URL when page changes
+  useEffect(() => {
+    if (currentPage > 1) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('page', currentPage.toString());
+      router.push(`?${params.toString()}`, { scroll: false });
+    } else if (currentPage === 1 && urlPage) {
+      // Remove page param if it's page 1
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('page');
+      router.push(`?${params.toString()}`, { scroll: false });
+    }
+  }, [currentPage, router, searchParams, urlPage]);
 
   // Map API status to component status
   const mapOrderStatus = (state: string): 'Processing' | 'Shipped' | 'Delivered' | 'Canceled'|'Refunded' => {
@@ -85,12 +107,11 @@ const OrderManagement: React.FC = () => {
       case 'Shipped':
         return 'bg-[#B0B0B0]';
       case 'Delivered':
-        return 'bg-[#29BB7D]'; // Fixed typo: was 'M' instead of 'D'
+        return 'bg-[#29BB7D]';
       case 'Canceled':
         return 'bg-[#DD2C2C]';
       case 'Refunded':
         return 'bg-[#1E60D4]';
-
       default:
         return 'bg-gray-400';
     }
@@ -98,7 +119,8 @@ const OrderManagement: React.FC = () => {
 
   // FIXED: Use _id instead of orderId for redirect
   const handleViewOrder = (orderId: string): void => {
-    router.push(`/pages/order/viewOrder/${orderId}`);
+    // Pass current page when navigating to view order
+    router.push(`/pages/order/viewOrder/${orderId}?page=${currentPage}`);
   };
 
   const handleSearchChange = (value: string): void => {

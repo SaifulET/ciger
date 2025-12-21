@@ -15,7 +15,7 @@ interface OrderItem {
 
 interface OrderData {
   _id?:string;
-  orderId: string;
+  orderId?: string;
   orderid?:string;
   transactionId?:string;
   trackingNo: string;
@@ -56,8 +56,8 @@ const OrderSummary: React.FC<Props> = ({
   statusConfig,
   onDownload,
 }) => {
-
-  console.log(orderData,"orderData")
+console.log(orderData,"kdkdkdkdkd")
+  // console.log(orderData,"orderData")
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
       {/* 🧾 Order Header */}
@@ -65,6 +65,9 @@ const OrderSummary: React.FC<Props> = ({
         <div>
           <h2 className="font-semibold text-[28px] leading-[36px] tracking-[0]">
             Order {orderData.orderid}
+          </h2>
+          <h2 className="font-medium text-[18px] leading-[36px] tracking-[0]">
+            TransactionId: {orderData.transactionId}
           </h2>
           <p className="font-normal text-[16px] leading-[24px] tracking-[0] text-gray-500">
             Placed on {orderData.placedOn}

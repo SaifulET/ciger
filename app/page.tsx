@@ -1,8 +1,11 @@
-import React from 'react'
+"use client";
+import Redirect from '@/Components/redirect/redirect'
+import React, { useEffect } from 'react'
 
 function page() {
+ 
   return (
-    <div ></div>
+    <div ><Redirect/></div>
   )
 }
 

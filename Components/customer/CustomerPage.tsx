@@ -2,18 +2,47 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Search, Eye } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation'; // Add useSearchParams
 import { useCustomerStore } from '@/app/store/useCustomerStore';
-
+import Cookies from "js-cookie";
 export default function CustomerManagement() {
+
+   const router = useRouter();
+  useEffect(()=>{
+      Cookies.get("token")?"":router.push("/auth/signin")
+    },[Cookies.get("token")])
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
+  
+  // Use URL search params to get and set page
+  const searchParams = useSearchParams();
+  
+  const urlPage = searchParams.get('page');
+  
+  // Initialize currentPage from URL or default to 1
+  const [currentPage, setCurrentPage] = useState(
+    urlPage ? parseInt(urlPage) : 1
+  );
 
   const { customers, loading, error, fetchCustomers } = useCustomerStore();
 
   useEffect(() => {
     fetchCustomers();
   }, [fetchCustomers]);
+
+  // Update URL when page changes
+  useEffect(() => {
+    if (currentPage > 1) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('page', currentPage.toString());
+      router.push(`?${params.toString()}`, { scroll: false });
+    } else if (currentPage === 1 && urlPage) {
+      // Remove page param if it's page 1
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('page');
+      router.push(`?${params.toString()}`, { scroll: false });
+    }
+  }, [currentPage, router, searchParams, urlPage]);
 
   // Filter customers based on search query
   const filteredCustomers = useMemo(() => {
@@ -107,7 +136,7 @@ export default function CustomerManagement() {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <Link href={`/pages/customers/${customer._id}`}>
+                    <Link href={`/pages/customers/${customer._id}?page=${currentPage}`}> {/* Pass current page */}
                       <button className="text-gray-600 text-right pl-5 hover:text-gray-900 transition-colors">
                         <Eye className="w-5 h-5" />
                       </button>

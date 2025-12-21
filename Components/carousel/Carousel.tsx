@@ -4,6 +4,8 @@ import { Delete02Icon, PlusSignIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import React, { useState, useRef, useEffect } from "react";
 
+import Cookies from "js-cookie";
+import { useRouter } from 'next/navigation';
 interface ImageData {
   id: string;
   url: string;
@@ -35,6 +37,10 @@ export default function CarouselImageUpload() {
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+   const router = useRouter();
+  useEffect(()=>{
+      Cookies.get("token")?"":router.push("/auth/signin")
+    },[Cookies.get("token")])
 
   // Fetch all carousel images
   const fetchImages = async () => {

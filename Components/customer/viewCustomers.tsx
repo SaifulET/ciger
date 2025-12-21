@@ -4,9 +4,9 @@ import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import OrderSummary from "@/Components/order/OrderSummary";
 import Link from "next/link";
 import { useCustomerStore } from '@/app/store/useCustomerStore';
-import { useParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation"; // Add useSearchParams
 
-// Types
+// Types (keep your existing types)
 type OrderStatus = "cancelled" | "delivered" | "shipped" | "processing" | "refunded";
 
 interface StatusConfig {
@@ -32,6 +32,7 @@ interface Product {
   _id: string;
   name: string;
   image?: string;
+  images?: string;
   brandId: Brand;
 }
 
@@ -54,6 +55,8 @@ interface ApiOrder {
   email: string;
   phone: string;
   orderId: string;
+  orderid?: string;
+  transactionId?:string;
   trackingNo: string;
   state: OrderStatus;
   userId: string;
@@ -80,7 +83,9 @@ interface OrderItem {
 }
 
 interface OrderData {
-  orderId: string;
+  orderId?: string;
+  orderid?: string;
+  transactionId?: string;
   trackingNo: string;
   placedOn: string;
   contact: ContactDetails;
@@ -120,15 +125,19 @@ const statusConfig: Record<OrderStatus, StatusConfig> = {
   },
   refunded: {
     bg: "bg-[#E8F1FF]",        // soft light blue background
-  text: "text-[#1E60D4]",    // medium blue text
-  border: "border-blue-200", // light blue border
-  dotColor: "bg-[#1E60D4]",
+    text: "text-[#1E60D4]",    // medium blue text
+    border: "border-blue-200", // light blue border
+    dotColor: "bg-[#1E60D4]",
   },
 };
 
 const CustomerManagement: React.FC = () => {
   // Get userId from URL params
   const params = useParams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnPage = searchParams.get('page') || '1'; // Get the page parameter
+  
   const userId = params.di as string;
   
   // State for filters
@@ -143,23 +152,26 @@ const CustomerManagement: React.FC = () => {
     userProfile,
     profileLoading,
     profileError,
-    fetchUserProfile ,
+    fetchUserProfile,
     clearOrders,
     clearProfile
   } = useCustomerStore();
 
-  console.log("User ID from params:", userId);
-  console.log("Customer orders from store:", customerOrders);
-  console.log("User profile from store:", userProfile);
- useEffect(() => {
-    console.log("🔄 Clearing store data for new user:", userId);
+  // Handle back to customers list
+  const handleBack = () => {
+    router.push(`/pages/customers?page=${returnPage}`);
+  };
+
+  useEffect(() => {
+    // console.log("🔄 Clearing store data for new user:", userId);
     clearOrders();
     clearProfile();
   }, [userId, clearOrders, clearProfile]);
+
   // Fetch orders when component mounts
   useEffect(() => {
     if (userId) {
-      console.log("Fetching orders for userId:", userId);
+      // console.log("Fetching orders for userId:", userId);
       fetchCustomerOrders(userId);
     }
   }, [userId, fetchCustomerOrders]);
@@ -172,7 +184,7 @@ const CustomerManagement: React.FC = () => {
         !userProfile && 
         !ordersLoading && 
         !profileLoading) {
-      console.log("No orders found, fetching user profile...");
+      // console.log("No orders found, fetching user profile...");
       fetchUserProfile(userId);
     }
   }, [userId, customerOrders, userProfile, ordersLoading, profileLoading, fetchUserProfile]);
@@ -275,7 +287,8 @@ const CustomerManagement: React.FC = () => {
     };
 
     return {
-      orderId: order._id,
+      orderid: order.orderid || "",
+      transactionId: order.transactionId || "",
       trackingNo: order.trackingNo,
       placedOn: new Date(order.date).toLocaleDateString('en-US', { 
         year: 'numeric', 
@@ -293,15 +306,8 @@ const CustomerManagement: React.FC = () => {
         // Extract product details from productId and brandId
         const productName = cart.productId?.name || cart.product || "Product Name";
         const brandName = cart.productId?.brandId?.name || cart.brand || "Brand Name";
-        const productImage = cart.productId?.image || cart.image || "/api/placeholder/50/50";
+        const productImage = cart.productId?.images || cart.image || "/api/placeholder/50/50";
         
-        console.log("Cart item details:", {
-          productName,
-          brandName,
-          productImage,
-          productId: cart.productId
-        });
-
         return {
           id: index + 1,
           image: productImage,
@@ -344,6 +350,12 @@ const CustomerManagement: React.FC = () => {
     return (
       <div className="min-h-screen ml-8 text-gray-800 flex items-center justify-center">
         <div className="text-lg text-red-500">Error loading orders: {ordersError}</div>
+        <button
+          onClick={handleBack}
+          className="mt-4 px-6 py-2 bg-[#C9A040] text-white rounded-lg hover:bg-[#9e7e33] transition"
+        >
+          Back to Customers
+        </button>
       </div>
     );
   }
@@ -358,12 +370,13 @@ const CustomerManagement: React.FC = () => {
         {/* Breadcrumb Navigation */}
         <div className="bg-white px-8 py-2 pt-4 rounded-lg mb-4">
           <div className="flex items-center gap-2 text-sm text-gray-600 mb-6">
-            <Link href="/pages/customers">
-              <button className="flex items-center gap-1 hover:text-gray-900">
-                <ChevronLeft className="w-4 h-4" />
-                Customer Management
-              </button>
-            </Link>
+            <button
+              onClick={handleBack}
+              className="flex items-center gap-1 hover:text-gray-900"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Customer Management
+            </button>
             <ChevronRight className="w-4 h-4" />
             <span className="text-gray-900">View History</span>
           </div>
@@ -446,6 +459,12 @@ const CustomerManagement: React.FC = () => {
             <p className="text-gray-500">
               {safeCustomerOrders.length === 0 ? "No orders found for this customer" : "No orders found matching your filters"}
             </p>
+            <button
+              onClick={handleBack}
+              className="mt-4 px-6 py-2 bg-[#C9A040] text-white rounded-lg hover:bg-[#9e7e33] transition"
+            >
+              Back to Customers
+            </button>
           </div>
         )}
       </div>

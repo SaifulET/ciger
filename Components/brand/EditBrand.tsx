@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation'; // Add useSearchParams
 import { ChevronRight } from 'lucide-react';
 import { useBrandStore } from '@/app/store/brandStore';
 import { Brand } from '../inventory/inventory';
@@ -8,13 +8,17 @@ import { Brand } from '../inventory/inventory';
 const BrandEdit: React.FC = () => {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnPage = searchParams.get('page') || '1'; // Get the page parameter
+  
   const { currentBrand, loading, error, fetchBrandById, updateBrand } = useBrandStore();
 
   const [brandName, setBrandName] = useState('');
   const [brandImage, setBrandImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
   const [feature, setFeature] = useState(false);
-const [originalBrand, setOriginalBrand] = useState<Brand | null>(null);  const [hasEdited, setHasEdited] = useState(false);
+  const [originalBrand, setOriginalBrand] = useState<Brand | null>(null);
+  const [hasEdited, setHasEdited] = useState(false);
 
   // 🔹 Load brand by URL param
   useEffect(() => {
@@ -82,7 +86,8 @@ const [originalBrand, setOriginalBrand] = useState<Brand | null>(null);  const [
       if (imagePreview && brandImage) {
         URL.revokeObjectURL(imagePreview);
       }
-      router.push('/pages/brand');
+      // Redirect back to brand list with the same page
+      router.push(`/pages/brand?page=${returnPage}`);
     }
   };
 
@@ -91,7 +96,8 @@ const [originalBrand, setOriginalBrand] = useState<Brand | null>(null);  const [
     if (imagePreview && brandImage) {
       URL.revokeObjectURL(imagePreview);
     }
-    router.push('/pages/brand');
+    // Go back to brand list with the same page
+    router.push(`/pages/brand?page=${returnPage}`);
   };
 
   // Clean up preview URLs on unmount
@@ -118,6 +124,12 @@ const [originalBrand, setOriginalBrand] = useState<Brand | null>(null);  const [
       <div className="min-h-screen bg-gray-50 p-8">
         <div className="max-w-4xl mx-auto">
           <p className="text-center text-gray-600">Brand not found</p>
+          <button
+            onClick={() => router.push(`/pages/brand?page=${returnPage}`)} // Include page
+            className="mt-4 px-6 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition"
+          >
+            Back to Brand List
+          </button>
         </div>
       </div>
     );
@@ -132,7 +144,7 @@ const [originalBrand, setOriginalBrand] = useState<Brand | null>(null);  const [
             <div >
               <div className=" flex items-center gap-2 text-sm mb-3">
                 <button
-                  onClick={() => router.push('/pages/brand')}
+                  onClick={() => router.push(`/pages/brand?page=${returnPage}`)} // Include page
                   className="text-gray-600 hover:text-gray-900"
                 >
                   ← Brand

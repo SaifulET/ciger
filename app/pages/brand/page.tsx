@@ -1,9 +1,9 @@
 import BrandManagement from '@/Components/brand/Brand'
-import React from 'react'
+import React, { Suspense } from 'react'
 
 function page() {
   return (
-    <div><BrandManagement/></div>
+    <Suspense fallback={<div>Loading inventory...</div>}><BrandManagement/></Suspense>
   )
 }
 

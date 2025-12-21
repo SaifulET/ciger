@@ -13,6 +13,7 @@ import { categories, subCategories, ProductFormData, ProductImage } from './inve
 const InventoryEditItem = () => {
   const searchParams = useSearchParams();
   const productId = searchParams.get('id');
+  const returnPage = searchParams.get('page') || '1'; // Get the page parameter
   
   const [formData, setFormData] = useState<ProductFormData>({
     category: '',
@@ -258,7 +259,8 @@ const InventoryEditItem = () => {
       const result = await updateProduct(productId, formData);
       if (result.success) {
         alert('Product updated successfully!');
-        router.push("/pages/inventory");
+        // Redirect back to inventory with the same page
+        router.push(`/pages/inventory?page=${returnPage}`);
       } else {
         alert(result.message || 'Failed to update product');
       }
@@ -269,7 +271,8 @@ const InventoryEditItem = () => {
   };
 
   const handleCancel = () => {
-    router.push("/pages/inventory");
+    // Go back to inventory with the same page
+    router.push(`/pages/inventory?page=${returnPage}`);
   };
 
   const getSubCategoryOptions = () => {
@@ -321,7 +324,7 @@ const InventoryEditItem = () => {
           <h1 className="text-2xl font-bold text-gray-800 mb-4">Product Not Found</h1>
           <p className="text-gray-600">The product you are trying to edit does not exist.</p>
           <button
-            onClick={() => router.push("/pages/inventory")}
+            onClick={() => router.push(`/pages/inventory?page=${returnPage}`)} // Include page
             className="mt-4 px-6 py-2 bg-[#C9A040] text-white rounded-lg font-medium hover:bg-[#8a6e2c] transition"
           >
             Back to Inventory
@@ -337,7 +340,7 @@ const InventoryEditItem = () => {
         {/* Header */}
         <div className="flex items-center justify-between mb-8 py-6 px-4 rounded-lg bg-white">
           <div className="flex items-center gap-3">
-            <Link href="/pages/inventory" className="flex pl-5">
+            <Link href={`/pages/inventory?page=${returnPage}`} className="flex pl-5"> {/* Include page in link */}
               <button className="hover:text-gray-900">
                 <HugeiconsIcon icon={ArrowLeft02Icon} />
               </button>

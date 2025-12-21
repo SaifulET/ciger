@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation'; // Add useSearchParams
 import { PencilEdit02Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { useBrandStore } from '@/app/store/brandStore';
@@ -8,6 +8,9 @@ import { useBrandStore } from '@/app/store/brandStore';
 const BrandView: React.FC = () => {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnPage = searchParams.get('page') || '1'; // Get the page parameter
+  
   const { currentBrand, loading, error, fetchBrandById, deleteBrand } = useBrandStore();
 
   useEffect(() => {
@@ -23,14 +26,21 @@ const BrandView: React.FC = () => {
     if (confirm('Are you sure you want to delete this brand?')) {
       await deleteBrand(currentBrand._id);
       if (!error) {
-        router.push('/pages/brand');
+        // Redirect back to brand list with the same page
+        router.push(`/pages/brand?page=${returnPage}`);
       }
     }
   };
 
   const handleEdit = () => {
     if (!currentBrand) return;
-    router.push(`/pages/brand/edit/${currentBrand._id}`);
+    // Pass current page when navigating to edit brand
+    router.push(`/pages/brand/edit/${currentBrand._id}?page=${returnPage}`);
+  };
+
+  const handleBack = () => {
+    // Go back to brand list with the same page
+    router.push(`/pages/brand?page=${returnPage}`);
   };
 
   if (loading) {
@@ -48,6 +58,12 @@ const BrandView: React.FC = () => {
       <div className="min-h-screen bg-gray-50 p-8">
         <div className="max-w-2xl mx-auto">
           <p className="text-center text-red-600">Error: {error}</p>
+          <button
+            onClick={handleBack}
+            className="mt-4 px-6 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition"
+          >
+            Back to Brand List
+          </button>
         </div>
       </div>
     );
@@ -58,6 +74,12 @@ const BrandView: React.FC = () => {
       <div className="min-h-screen bg-gray-50 p-8">
         <div className="max-w-2xl mx-auto">
           <p className="text-center text-gray-600">Brand not found</p>
+          <button
+            onClick={handleBack}
+            className="mt-4 px-6 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition"
+          >
+            Back to Brand List
+          </button>
         </div>
       </div>
     );
@@ -68,11 +90,19 @@ const BrandView: React.FC = () => {
       <div className="">
         {/* Header */}
         <div className="flex justify-between items-center mb-8 px-8 py-4 bg-white rounded-lg">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleBack}
+              className="text-gray-600 hover:text-gray-900 flex items-center gap-2"
+            >
+              ← Brand
+            </button>
+          </div>
           <h1 className="text-3xl font-bold text-gray-900">Brand Management</h1>
           <div className="flex gap-3">
             <button
               onClick={handleDelete}
-              className="bg-[#DD2C2C] hover:bg-red-700 flex items-center justify-center gap-2 px-6 py-3  text-gray-100 rounded-lg  transition-colors font-semibold text-[16px] leading-[24px] tracking-[0] "
+              className="bg-[#DD2C2C] hover:bg-red-700 flex items-center justify-center gap-2 px-6 py-3 text-gray-100 rounded-lg transition-colors font-semibold text-[16px] leading-[24px] tracking-[0]"
             >
               Delete
             </button>
@@ -138,7 +168,7 @@ const BrandView: React.FC = () => {
                 <img
                   src={currentBrand.image}
                   alt={currentBrand.name}
-                  className="w-64 h-64  rounded-lg border border-gray-300"
+                  className="w-64 h-64 rounded-lg border border-gray-300"
                 />
               </div>
             ) : (

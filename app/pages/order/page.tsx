@@ -1,9 +1,9 @@
 import OrderManagement from '@/Components/order/OrderPage'
-import React from 'react'
+import React, { Suspense } from 'react'
 
 function page() {
   return (
-    <div><OrderManagement/></div>
+     <Suspense fallback={<div>Loading inventory...</div>}><OrderManagement/></Suspense>
   )
 }
 
