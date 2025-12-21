@@ -6,6 +6,7 @@ import { ArrowLeft02Icon } from "@hugeicons/core-free-icons";
 import OrderSummary from "@/Components/order/OrderSummary";
 import { useParams, useRouter } from "next/navigation";
 import { useOrderStore } from "@/app/store/useOrderStore";
+import api from "@/lib/axios";
 
 // ================= TYPES =================
 type OrderStatus = "cancelled" | "delivered" | "shipped" | "processing" | "refunded";
@@ -36,6 +37,7 @@ interface OrderItem {
 
 interface OrderData {
   orderId: string;
+  orderid?: string;
   trackingNo: string;
   placedOn: string;
   contact: ContactDetails;
@@ -118,6 +120,7 @@ const OrderDetailsPage: React.FC = () => {
     if (!currentOrder) {
       return {
         orderId: "",
+        orderid:"",
         trackingNo: "",
         placedOn: "",
         contact: { name: "", email: "", phone: "", address: "" },
@@ -165,6 +168,7 @@ const OrderDetailsPage: React.FC = () => {
         label: `${currentOrder.discount}%`, 
         amount: discountAmount 
       },
+      orderid:currentOrder.orderid,
       shippingCost: currentOrder.shippingCost,
       subTotal: currentOrder.subtotal,
       payment: { 
@@ -190,6 +194,15 @@ const OrderDetailsPage: React.FC = () => {
   };
 
   const handleStatusChange = async (status: OrderStatus) => {
+    const statusChange= await api.post("/mail/refundConfirmation", {
+          email:currentOrder?.email,
+          orderId: currentOrder?.orderid,
+          transactionId: currentOrder?.transactionId,
+          Amount: currentOrder?.total,
+          status:status,
+        });
+        console.log(currentOrder,statusChange,"185")
+
     setOrderStatus(status);
     setIsDropdownOpen(false);
     

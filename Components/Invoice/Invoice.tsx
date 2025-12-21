@@ -3,7 +3,8 @@
 import React, { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import logo from "@/public/logo.svg";
+// import logo from "@/public/logo.svg";
+import logo from "@/public/logo2.png";
 import { useOrderStore, ApiOrder } from '@/app/store/useOrderStore'; // Adjust import path as needed
 
 // Use the real jsPDF type for correct typing (no `any`)
@@ -72,11 +73,11 @@ const transformOrderToInvoiceData = (order: ApiOrder): InvoiceData => {
   };
 
   return {
-    orderId: order.orderId,
+    orderId: order.orderid,
     trackingNo: order.trackingNo,
     placedOn: formatDate(order.createdAt),
-    companyPhone: "689296744", // Static company info
-    companyEmail: "admin@tele-portes.com", // Static company info
+    companyPhone: "904-990-2445", // Static company info
+    companyEmail: "support@smokenza.com", // Static company info
     contact: {
       name: order.name,
       email: order.email,

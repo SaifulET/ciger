@@ -37,7 +37,9 @@ interface OrderItem {
 
 interface OrderData {
   orderId: string;
+  orderid?: string;
   trackingNo: string;
+transactionId?:string;
   placedOn: string;
   contact: ContactDetails;
   items: OrderItem[];
@@ -81,6 +83,7 @@ const OrderDetailsPage: React.FC = () => {
 
       const transformedData: OrderData = {
         orderId: currentOrder._id,
+        orderid: currentOrder.orderid,
         trackingNo: currentOrder.trackingNo,
         placedOn: new Date(currentOrder.createdAt).toLocaleDateString('en-US', {
           year: 'numeric',
@@ -117,7 +120,8 @@ const OrderDetailsPage: React.FC = () => {
           amount: currentOrder.total 
         },
         refund: false,
-        total: currentOrder.total
+        total: currentOrder.total,
+        transactionId:currentOrder.transactionId
       };
 
       setOrderData(transformedData);
@@ -172,7 +176,17 @@ const handleRefundToggle = async () => {
 
   try {
     const refunds = await api.put(`/order/updateOrderById/${id}`, data);
-    console.log(refunds, "169");
+    console.log(refunds, "1649");
+    if(refunds.data.success){
+      const refundMail = await api.post("/mail/refundConfirmation", {
+          email: orderData?.contact.email,
+          orderId: orderData?.orderid,
+          transactionId: orderData?.transactionId,
+          refundAmount: orderData?.total,
+          status:"refunded"
+        });
+        console.log(refundMail,"185")
+    }
   } catch (error) {
     console.error(error);
   }

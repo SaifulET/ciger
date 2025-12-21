@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
-import logo from "@/public/logo.svg"
+// import logo from "@/public/logo.svg"
+import logo from "@/public/logo2.png"
 import Image from "next/image";
 import Cookies from "js-cookie";
 
@@ -37,7 +38,7 @@ const {UserLogoutRequest}=useUserStore()
       <nav className="flex justify-between m-0 p-0 items-center px-4 md:px-16 py-4 md:py-8 w-full h-full bg-[#ffffff]">
        
        
-        <Image src={logo} alt="logo"  width={150} height={150} className="rounded-full " />
+        <Image src={logo} alt="logo"  width={150} height={150} className="" />
 
         {/* Desktop + Medium Menu */}
         <div className="hidden md:flex items-center gap-16 lg:gap-18 w-auto ">

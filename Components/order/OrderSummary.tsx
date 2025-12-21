@@ -16,6 +16,8 @@ interface OrderItem {
 interface OrderData {
   _id?:string;
   orderId: string;
+  orderid?:string;
+  transactionId?:string;
   trackingNo: string;
   placedOn: string;
   contact: {
@@ -54,13 +56,15 @@ const OrderSummary: React.FC<Props> = ({
   statusConfig,
   onDownload,
 }) => {
+
+  console.log(orderData,"orderData")
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
       {/* 🧾 Order Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
         <div>
           <h2 className="font-semibold text-[28px] leading-[36px] tracking-[0]">
-            Order {orderData.orderId}
+            Order {orderData.orderid}
           </h2>
           <p className="font-normal text-[16px] leading-[24px] tracking-[0] text-gray-500">
             Placed on {orderData.placedOn}
@@ -140,11 +144,11 @@ const OrderSummary: React.FC<Props> = ({
       <div className="mt-6 space-y-2">
         <div className="flex justify-between text-sm">
           <span className="font-semibold text-[16px] leading-[24px] tracking-[0] text-gray-700">
-            Tax
+            Tax({` ${((orderData.tax.amount)*100/orderData.subTotal).toFixed(2)}%`})
           </span>
-          <div className="flex gap-8">
+          <div className="flex gap-12">
             <span className="text-gray-500 font-semibold text-[16px] leading-[24px] tracking-[0] ">
-              {orderData.tax.label}
+             
             </span>
             <span className="text-gray-900 w-20 text-right font-semibold text-[16px] leading-[24px] tracking-[0]">
               ${orderData.tax.amount.toFixed(2)}
@@ -153,11 +157,11 @@ const OrderSummary: React.FC<Props> = ({
         </div>
         <div className="flex justify-between text-sm">
           <span className="font-semibold text-[16px] leading-[24px] tracking-[0] text-gray-700">
-            Discount
+            Discount({` ${orderData.discount.label}`})
           </span>
           <div className="flex gap-8">
             <span className="text-gray-500 font-semibold text-[16px] leading-[24px] tracking-[0]">
-              {orderData.discount.label}
+              
             </span>
             <span className="text-gray-900 w-20 text-right font-semibold text-[16px] leading-[24px] tracking-[0]">
               ${orderData.discount.amount.toFixed(2)}

@@ -12,6 +12,7 @@ type Notification = {
   userName: string;
   message: string;
   orderId?: string;
+  orderid?: string;
   timestamp: string; // API provides formatted timestamp
   status: "placed" | "delivered" | "cancelled" | "shipped";
 };
@@ -145,6 +146,7 @@ const router = useRouter()
       ) : (
         <div className="flex flex-col gap-4">
           {notifications.map((notif) => (
+            
             <div
               key={notif.id}
               className="flex items-start gap-4 border border-gray-200 rounded-lg p-4 hover:shadow-sm transition"
@@ -157,9 +159,9 @@ const router = useRouter()
                 <p className="font-semibold text-sm md:text-base">
                   {notif.userName}s {notif.message}
                 </p>
-                {notif.orderId && (
+                {notif.orderid && (
                   <p className="text-gray-500 text-sm mt-1">
-                    Order ID: {notif.orderId}
+                    Order ID: {notif.orderid}
                   </p>
                 )}
                 <p className="text-gray-400 text-xs mt-1">
