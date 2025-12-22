@@ -28,7 +28,7 @@ export default function RevenueChart() {
   const chartHeight = 144;
 
   return (
-    <div className="w-full h-[426px] bg-white border border-[#EDEDED] rounded-[12px] flex flex-col my-[25px] ml-10">
+    <div className="w-full h-[426px] bg-white border border-[#EDEDED] rounded-[12px] flex flex-col my-[25px] ml-10 mx-[32px]">
       {/* Header */}
       <div className="flex flex-row justify-between items-center px-6 py-3 w-full h-[60px] bg-[#FFFAE6] shadow-[inset_0px_-1px_0px_#E5E7E8] rounded-t-[12px]">
         <h3 className="font-poppins font-semibold text-[28px] leading-[36px] text-[#212121]">

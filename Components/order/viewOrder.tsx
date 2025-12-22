@@ -220,6 +220,9 @@ const OrderDetailsPage: React.FC = () => {
   const handleTrackingSave = async () => {
     if (orderId && trackingNumber) {
       await updateOrder(orderId, { trackingNo: trackingNumber });
+console.log("end")
+       const msg= await api.post("/mail/trackingNumber",{orderId,trackingNo:trackingNumber})
+console.log(msg,'abc')
     }
   };
 
