@@ -151,7 +151,7 @@ export default function EmployeeManagement() {
   const filteredEmployees = useMemo(() => {
     return employees.filter(
       (employee) =>
-        employee.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        employee?.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         employee.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
         employee._id.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -310,7 +310,7 @@ export default function EmployeeManagement() {
                     {employee._id}
                   </td>
                   <td className="px-6 py-4 text-gray-900">
-                    {employee.firstName} {employee.lastName}
+                    {employee?.firstName} {employee?.lastName}
                   </td>
                   <td className="px-6 py-4 text-gray-900">{employee.email}</td>
                   <td className="px-6 py-4 text-gray-900">
