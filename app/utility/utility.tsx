@@ -30,3 +30,23 @@ export function getEmail(): string | null {
   }
   return null;
 }
+
+
+
+export const clearAllAuthData = () => {
+  // Clear ALL localStorage items for this domain
+  localStorage.clear();
+  
+  // Clear ALL sessionStorage items
+  sessionStorage.clear();
+  
+  // Clear cookies (this only works for cookies accessible via JavaScript)
+  document.cookie.split(";").forEach(cookie => {
+    const eqPos = cookie.indexOf("=");
+    const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+    document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+    document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=" + window.location.hostname;
+  });
+  
+  console.log("All auth data cleared")
+}

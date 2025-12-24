@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 // import logo from "@/public/logo.svg"
-import logo from "@/public/logo2.png"
+import logo from "@/public/logo.png"
 import Image from "next/image";
 import Cookies from "js-cookie";
 

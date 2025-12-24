@@ -4,7 +4,7 @@ import React, { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 // import logo from "@/public/logo.svg";
-import logo from "@/public/logo2.png";
+import logo from "@/public/logo.png";
 import { useOrderStore, ApiOrder } from '@/app/store/useOrderStore'; // Adjust import path as needed
 
 // Use the real jsPDF type for correct typing (no `any`)

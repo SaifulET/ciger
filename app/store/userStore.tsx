@@ -137,7 +137,7 @@ const useUserStore = create<UserStoreState>()(
           // Set token and user data
           Cookies.set("token", res.data.token);
           const userId = res.data.data._id;
-          
+          setEmail(res.data.data.email);
           set({ 
             user: userId,
             isLoggedIn: true 

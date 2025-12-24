@@ -17,7 +17,7 @@ export default function RootLayout({
         <Navbar/>
 
         <div className="bg-[#F5F5F5] p-[16px] md:p-[32px] grid  grid-cols-[2fr_6fr] ">
-            <div className=""><Sidebar/></div>
+            <div className=" "><Sidebar/></div>
            {children} 
         </div>
         

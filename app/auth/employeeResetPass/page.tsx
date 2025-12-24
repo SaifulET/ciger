@@ -6,12 +6,16 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import logo from "@/public/logo.png"
 import useUserStore from '@/app/store/userStore';
+import api from '@/lib/axios';
+import { getEmail } from '@/app/utility/utility';
 
 const NewPassword: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [firstName,setFirstName]=useState("")
+  const [lastName,setLastName]=useState("")
   const router = useRouter();
 
    const [errorMessage, setErrorMessage] = useState<string>("");
@@ -19,16 +23,15 @@ const NewPassword: React.FC = () => {
 
 
   const handleNext = async() => {
-    console.log("h")
-   const res = await UserNewPassword(newPassword,confirmPassword);
-   console.log(res)
-   if (res.status==="success") {
-    setErrorMessage("t");
-    console.log(res.message)
-    router.push('/auth/welcome');
+    const email= getEmail()
+   const res = await api.post("/employee/setPassword",{email,password:newPassword,confirmPassword,firstName,lastName});
+   console.log(res,"abc")
+   if (res.data?.success===true) {
+    setErrorMessage("");
+    router.push('/auth/signin');
   } else {
     console.log("y")
-    setErrorMessage(res.message || "Something went wrong");
+    setErrorMessage(res.data?.message || "Something went wrong");
   }
   };
 
@@ -46,22 +49,56 @@ const NewPassword: React.FC = () => {
           {/* Logo */}
           <div className="w-[500px] h-24 flex items-center justify-center">
             <div className="text-center">
-              <Image src={logo} alt="logo" width={220} height={220} className='rounded-full'/>
+              <Image src={logo} alt="logo" width={220} height={220} className=''/>
                {/* <Image src={Logo} alt='logo'/> */}
             </div>
           </div>
 
           {/* Header text */}
           <div className="flex flex-col items-center gap-1 w-full max-w-[375px]">
-            <h3 className="text-2xl font-semibold text-gray-900 text-center">Set new password</h3>
-            <p className="text-base text-gray-500 text-center leading-6">
-              Set a new password and continue your journey
-            </p>
+            <h3 className="text-2xl font-semibold text-gray-900 text-center">Set Name & new password</h3>
+            
           </div>
 
           {/* Form */}
           <div className="flex flex-col gap-6 w-full max-w-[500px]">
-            
+
+             <div className="flex flex-col gap-2">
+              <label className="text-lg font-semibold text-gray-900">First Name</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="Enter Your First Name"
+                  className="w-full h-[52px] pl-12 pr-12 py-3.5 bg-yellow-50 border border-gray-200 rounded-xl text-base text-gray-500 placeholder-gray-500 focus:outline-none focus:border-yellow-600 focus:text-gray-900"
+                />
+                <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
+                 
+                </div>
+                
+              </div>
+            </div>
+
+
+             <div className="flex flex-col gap-2">
+              <label className="text-lg font-semibold text-gray-900">Last Name</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Enter Your Last Name"
+                  className="w-full h-[52px] pl-12 pr-12 py-3.5 bg-yellow-50 border border-gray-200 rounded-xl text-base text-gray-500 placeholder-gray-500 focus:outline-none focus:border-yellow-600 focus:text-gray-900"
+                />
+                <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
+                 
+                </div>
+                
+              </div>
+            </div>
+
+
             {/* New Password Field */}
             <div className="flex flex-col gap-2">
               <label className="text-lg font-semibold text-gray-900">New Password</label>

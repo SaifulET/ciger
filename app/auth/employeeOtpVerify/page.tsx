@@ -7,6 +7,7 @@ import logo from "@/public/logo.png"
 import Image from 'next/image';
 import useUserStore from "@/app/store/userStore";
 import { getEmail } from '@/app/utility/utility';
+import api from '@/lib/axios';
 
 const OTPVerification: React.FC = () => {
   const [otpValues, setOtpValues] = useState(['', '', '', '']);
@@ -61,17 +62,13 @@ const OTPVerification: React.FC = () => {
   };
 
   const handleNext = async() => {
-
-    const res = await VerifyOtpRequest(otpValues.join(""));
-    console.log(res)
-
-  if (res.message ==="OTP verified successfully") {
-    setErrorMessage("t");
-    console.log(res.message)
-    router.push('/auth/new-password');
+    const email= getEmail()
+    const res = await api.post("/employee/verifyOtp",{email,otp:otpValues.join("")})
+  if (res.data?.message ==="OTP verified successfully") {
+    setErrorMessage("");
+    router.push('/auth/employeeResetPass');
   } else {
-    console.log("y")
-    setErrorMessage(res.message || "Something went wrong");
+    setErrorMessage(res.data?.message || "Something went wrong");
   }
 
     
@@ -85,7 +82,7 @@ const OTPVerification: React.FC = () => {
   };
   const handleBackToForgetPassword=async ()=>{
      const email = getEmail();
-    await UserForgetPasswordRequest(email??"");
+    await api.post("/employee/signup",{email});
   }
 
   return (
@@ -100,7 +97,7 @@ const OTPVerification: React.FC = () => {
           <div className="w-[500px] h-24 flex items-center justify-center">
             <div className="text-center">
                {/* <Image src={Logo} alt='logo'/> */}
-              <Image src={logo} alt="logo"width={220} height={220} className='rounded-full' />
+              <Image src={logo} alt="logo"width={220} height={220} className='' />
             </div>
           </div>
 
@@ -108,7 +105,7 @@ const OTPVerification: React.FC = () => {
           <div className="flex flex-col items-center gap-1 w-full max-w-[427px]">
             <h3 className="text-2xl font-semibold text-gray-900 text-center">Verify Code</h3>
             <p className="text-base text-gray-500 text-center leading-6">
-              We Sent OTP code to your email &quot;example@gmail.com&quot;. Enter the code below to verify
+              We Sent OTP code to Admin email &quot;support@smokenza.com&quot;. Enter the code below to verify
             </p>
           </div>
 

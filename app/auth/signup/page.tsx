@@ -7,7 +7,7 @@ import { NextPage } from 'next';
 
 import { useRouter } from 'next/navigation'
 import Image from 'next/image';
-import logo from "@/public/logo.svg"
+import logo from "@/public/logo.png"
 import useUserStore from "@/app/store/userStore";
 
 

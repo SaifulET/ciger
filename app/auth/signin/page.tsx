@@ -5,8 +5,33 @@ import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { NextPage } from "next";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import logo from "@/public/logo.svg";
+import logo from "@/public/logo.png";
 import useUserStore from "@/app/store/userStore";
+
+// Define response types
+type LoginStatus = "success" | "error" | "fail";
+
+interface BaseResponse {
+  status: LoginStatus;
+  message: string;
+}
+
+interface SuccessResponse extends BaseResponse {
+  status: "success";
+  data?: {
+    token?: string;
+    user?: unknown;
+    [key: string]: unknown;
+  };
+}
+
+interface ErrorResponse extends BaseResponse {
+  status: "error" | "fail";
+  error?: string;
+  code?: number;
+}
+
+type LoginResponse = SuccessResponse | ErrorResponse;
 
 const SignInPage: NextPage = () => {
   const [email, setEmail] = useState<string>("");
@@ -19,8 +44,8 @@ const SignInPage: NextPage = () => {
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user.length>0) {
-      console.log("hellow")
+    if (user.length > 0) {
+      console.log("User already logged in, redirecting to dashboard");
       // router.push("/pages/dashboard");
     }
   }, [user, router]);
@@ -34,34 +59,40 @@ const SignInPage: NextPage = () => {
       return;
     }
 
+    // Email validation regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setErrorMessage("Please enter a valid email address");
+      return;
+    }
+
     setIsLoading(true);
     setErrorMessage("");
 
     try {
-      const res = await UserLoginRequest(email, password);
-      if(res.status==="success"){
-            console.log("43",res)
-     
+      const res = await UserLoginRequest(email, password) as LoginResponse;
+      
+      if (res.status === "success") {
         setErrorMessage("");
-         setIsLoading(false);
-      router.push("/pages/dashboard")
+        setIsLoading(false);
+        router.push("/pages/dashboard");
+      } else {
+        setErrorMessage(res.message || "Login failed. Please try again.");
+        setIsLoading(false);
       }
-      else{
-           setErrorMessage("Invalid User");
-         setIsLoading(false);
-      }
-      
-    
-      
     } catch (error) {
-      setErrorMessage("An unexpected error occurred. Please try again.");
+      if (error instanceof Error) {
+        setErrorMessage(error.message || "An unexpected error occurred. Please try again.");
+      } else {
+        setErrorMessage("An unexpected error occurred. Please try again.");
+      }
       console.error("Login error:", error);
-      router.push("/auth/signin")
-    } 
+      setIsLoading(false);
+    }
   };
 
   const handleCreateAccount = () => {
-    router.push("/auth/signup");
+    router.push("/auth/employeeRegister");
   };
 
   const handleForgotPassword = () => {
@@ -69,7 +100,8 @@ const SignInPage: NextPage = () => {
   };
 
   // If already logged in, show loading while redirecting
-  // if (user.length>0) {
+  // Uncomment if you want to redirect when user is already logged in
+  // if (user.length > 0) {
   //   return (
   //     <div className="min-h-screen bg-white flex items-center justify-center">
   //       <div className="text-center">
@@ -89,10 +121,10 @@ const SignInPage: NextPage = () => {
             <div className="text-center">
               <Image
                 src={logo}
-                alt="logo"
+                alt="Company Logo"
                 width={200}
                 height={200}
-                className="rounded-full"
+                className=""
                 priority
               />
             </div>
@@ -112,6 +144,7 @@ const SignInPage: NextPage = () => {
           <form
             onSubmit={handleSubmit}
             className="w-full max-w-[500px] flex flex-col gap-4 sm:gap-6"
+            noValidate
           >
             {/* Email field */}
             <div className="flex flex-col gap-2">
@@ -126,6 +159,7 @@ const SignInPage: NextPage = () => {
                   <Mail
                     className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600 flex-shrink-0"
                     strokeWidth={1.5}
+                    aria-hidden="true"
                   />
                   <input
                     id="email"
@@ -137,6 +171,8 @@ const SignInPage: NextPage = () => {
                     required
                     disabled={isLoading}
                     autoComplete="email"
+                    aria-required="true"
+                    aria-describedby={errorMessage ? "error-message" : undefined}
                   />
                 </div>
               </div>
@@ -155,7 +191,8 @@ const SignInPage: NextPage = () => {
                   type="button"
                   onClick={handleForgotPassword}
                   disabled={isLoading}
-                  className="text-yellow-600 hover:text-yellow-700 font-medium text-xs sm:text-sm leading-5 transition-colors duration-200 disabled:opacity-50"
+                  className="text-yellow-600 hover:text-yellow-700 font-medium text-xs sm:text-sm leading-5 transition-colors duration-200 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 rounded"
+                  aria-label="Forgot password"
                 >
                   Forgot Password?
                 </button>
@@ -165,6 +202,7 @@ const SignInPage: NextPage = () => {
                   <Lock
                     className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600 flex-shrink-0"
                     strokeWidth={1.5}
+                    aria-hidden="true"
                   />
                   <input
                     id="password"
@@ -176,12 +214,16 @@ const SignInPage: NextPage = () => {
                     required
                     disabled={isLoading}
                     autoComplete="current-password"
+                    aria-required="true"
+                    aria-describedby={errorMessage ? "error-message" : undefined}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="text-yellow-600 hover:text-yellow-700 focus:outline-none transition-colors duration-200 disabled:opacity-50"
+                    className="text-yellow-600 hover:text-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 rounded transition-colors duration-200 disabled:opacity-50"
                     disabled={isLoading}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-pressed={showPassword}
                   >
                     {showPassword ? (
                       <EyeOff className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={1.5} />
@@ -195,7 +237,11 @@ const SignInPage: NextPage = () => {
 
             {/* Error message */}
             {errorMessage && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <div 
+                className="bg-red-50 border border-red-200 rounded-lg p-3"
+                role="alert"
+                id="error-message"
+              >
                 <p className="text-red-600 text-sm text-center">
                   {errorMessage}
                 </p>
@@ -206,12 +252,13 @@ const SignInPage: NextPage = () => {
             <button
               type="submit"
               disabled={isLoading || !email || !password}
-              className="w-full bg-[#FFCF00] hover:bg-[#b59300] disabled:bg-gray-300 disabled:cursor-not-allowed text-gray-800 font-medium text-base py-3 sm:py-4 px-8 rounded-xl h-[48px] sm:h-[52px] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
+              className="w-full bg-[#FFCF00] hover:bg-[#b59300] disabled:bg-gray-300 disabled:cursor-not-allowed text-gray-800 font-medium text-base py-3 sm:py-4 px-8 rounded-xl h-[48px] sm:h-[52px] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:hover:bg-gray-300"
+              aria-busy={isLoading}
             >
               {isLoading ? (
                 <div className="flex items-center justify-center gap-2">
                   <div className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
-                  Signing In...
+                  <span>Signing In...</span>
                 </div>
               ) : (
                 "Login"
@@ -225,7 +272,7 @@ const SignInPage: NextPage = () => {
                 <button
                   type="button"
                   onClick={handleCreateAccount}
-                  className="text-yellow-600 hover:text-yellow-700 font-medium transition-colors duration-200 disabled:opacity-50"
+                  className="text-yellow-600 hover:text-yellow-700 font-medium transition-colors duration-200 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 rounded px-1"
                   disabled={isLoading}
                 >
                   Create an account

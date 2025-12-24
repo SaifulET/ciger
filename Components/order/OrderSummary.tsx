@@ -2,7 +2,7 @@
 import React from "react";
 import { Check } from "lucide-react";
 
-// Type definitions for converted data (matching the CustomerManagement component)
+
 interface OrderItem {
   id: number;
   image: string;

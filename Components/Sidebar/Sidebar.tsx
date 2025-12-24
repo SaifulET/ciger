@@ -4,19 +4,19 @@ import { useRouter, usePathname } from "next/navigation";
 import {
   Menu,
   X,
-  ChevronDown,
-  ChevronUp,
 } from "lucide-react";
-import { Analytics01Icon, BrandfetchIcon, Calendar03Icon, DashboardSquare01Icon, Discount01Icon, Image01Icon, Logout01Icon, Money04Icon, MoneyBag01Icon, Notification01Icon, PackageIcon, PencilEdit02Icon, UserGroupIcon, UserIcon } from "@hugeicons/core-free-icons";
+import { Analytics01Icon, BrandfetchIcon, Calendar03Icon, DashboardSquare01Icon, Discount01Icon, Image01Icon, Logout01Icon, Money04Icon, MoneyBag01Icon, Notification01Icon, PackageIcon, PencilEdit02Icon, UserGroupIcon, UserIcon, UserStar01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { getEmail, clearAllAuthData } from "@/app/utility/utility";
 
-// ✅ Define proper TypeScript interfaces
+// ✅ MenuItem interface
 interface MenuItem {
   label: string;
   icon: React.ReactNode;
   path?: string;
   danger?: boolean;
   children?: MenuItem[];
+  onClick?: () => void;
 }
 
 interface MenuStructure {
@@ -26,8 +26,8 @@ interface MenuStructure {
   personal: MenuItem[];
 }
 
-// ✅ Updated menu to match UI with proper typing
-const menu: MenuStructure = {
+// ✅ Base menu structure (without admin items)
+const baseMenu: MenuStructure = {
   main: [
     { label: "Dashboard", icon: <HugeiconsIcon icon={DashboardSquare01Icon} />, path: "/pages/dashboard" },
     { label: "Analytics", icon: <HugeiconsIcon icon={Analytics01Icon} />, path: "/pages/analytics" },
@@ -35,11 +35,7 @@ const menu: MenuStructure = {
   ],
   resourceOrderManagement: [
     { label: "Carousel Management", icon: <HugeiconsIcon icon={Image01Icon} />, path: "/pages/carousel" },
-    {
-      label: "Inventory Management",
-      icon: <HugeiconsIcon icon={PackageIcon} />,
-      path: "/pages/inventory"
-    },
+    { label: "Inventory Management", icon: <HugeiconsIcon icon={PackageIcon} />, path: "/pages/inventory" },
     { label: "Order Management", icon: <HugeiconsIcon icon={Calendar03Icon} />, path: "/pages/order" },
     { label: "Customer Management", icon: <HugeiconsIcon icon={UserGroupIcon} />, path: "/pages/customers" },
     { label: "Brand Management", icon: <HugeiconsIcon icon={BrandfetchIcon} />, path: "/pages/brand" },
@@ -52,166 +48,224 @@ const menu: MenuStructure = {
   ],
   personal: [
     { label: "Profile", icon: <HugeiconsIcon icon={UserIcon} />, path: "/pages/profile" },
-    { label: "Logout", icon: <HugeiconsIcon icon={Logout01Icon} />, danger: true, path: "/auth/signin" },
+    { 
+      label: "Logout", 
+      icon: <HugeiconsIcon icon={Logout01Icon} />, 
+      danger: true,
+      onClick: () => {
+        clearAllAuthData();
+        window.location.href = "/auth/signin";
+      }
+    },
   ],
 };
+
+// ✅ Admin menu items (separate)
+const adminMenuItems: MenuItem[] = [
+  { label: "Employee", icon: <HugeiconsIcon icon={UserStar01Icon} />, path: "/pages/employee" },
+];
 
 const Sidebar = () => {
   const router = useRouter();
   const pathname = usePathname();
   const [activeItem, setActiveItem] = useState<string>("Dashboard");
   const [isOpen, setIsOpen] = useState(false);
-  const [openDropdowns, setOpenDropdowns] = useState<string[]>([]);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [userEmail, setUserEmail] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Function to get the base path (first 2 segments)
-  const getBasePath = (path: string) => {
-    const segments = path.split('/').filter(segment => segment.length > 0);
-    return '/' + segments.slice(0, 2).join('/');
-  };
-
-  // Function to find menu item by path
-  const findMenuItemByPath = (path: string): MenuItem | null => {
-    const basePath = getBasePath(path);
-    
-    // Search through all menu sections
-    const allMenuItems = [
-      ...menu.main,
-      ...menu.resourceOrderManagement,
-      ...menu.pricing,
-      ...menu.personal
-    ];
-    
-    return allMenuItems.find(item => item.path === basePath) || null;
-  };
-
-  // Function to find parent section for dropdown
-  const findParentSection = (itemLabel: string): string | null => {
-    if (menu.main.some(item => item.label === itemLabel)) return "Main";
-    if (menu.resourceOrderManagement.some(item => item.label === itemLabel)) return "Resource & Order Management";
-    if (menu.pricing.some(item => item.label === itemLabel)) return "Pricing & Discounts";
-    if (menu.personal.some(item => item.label === itemLabel)) return "Personal Information";
-    return null;
-  };
-
-  // Set active item based on current URL when component mounts or pathname changes
+  // ✅ Simplified auth initialization
   useEffect(() => {
-    const currentMenuItem = findMenuItemByPath(pathname);
-    if (currentMenuItem) {
-      setActiveItem(currentMenuItem.label);
-      
-      // Also open the parent dropdown if applicable
-      const parentSection = findParentSection(currentMenuItem.label);
-      if (parentSection) {
-        setOpenDropdowns([parentSection]);
-      }
-    }
-
-    // Load from localStorage (for backward compatibility)
-    const savedItem = localStorage.getItem("activeSidebarItem");
-    const savedDropdowns = localStorage.getItem("openDropdowns");
-    
-    if (savedItem && !currentMenuItem) {
-      setActiveItem(savedItem);
-    }
-    
-    if (savedDropdowns) {
+    const checkAuth = () => {
+      setIsLoading(true);
       try {
-        setOpenDropdowns(JSON.parse(savedDropdowns));
-      } catch {
-        setOpenDropdowns([]);
+        const email = getEmail();
+        
+        if (email) {
+          setUserEmail(email);
+          // Check if user is admin
+          const adminCheck = email === "support@smokenza.com";
+          setIsAdmin(adminCheck);
+          console.log("Auth check - Email:", email, "Is Admin:", adminCheck);
+        } else {
+          setUserEmail("");
+          setIsAdmin(false);
+          console.log("No email found in localStorage");
+        }
+      } catch (error) {
+        console.error("Auth check error:", error);
+        setUserEmail("");
+        setIsAdmin(false);
+      } finally {
+        setIsLoading(false);
       }
-    }
-  }, [pathname]);
+    };
 
-  // Save active and dropdown states
+    checkAuth();
+
+    // Listen for auth changes (custom event)
+    const handleAuthChange = () => {
+      console.log("Auth change detected, rechecking...");
+      checkAuth();
+    };
+
+    window.addEventListener('authChange', handleAuthChange);
+    window.addEventListener('storage', handleAuthChange);
+
+    return () => {
+      window.removeEventListener('authChange', handleAuthChange);
+      window.removeEventListener('storage', handleAuthChange);
+    };
+  }, []);
+
+  // ✅ Set active item based on current path
   useEffect(() => {
-    localStorage.setItem("activeSidebarItem", activeItem);
-  }, [activeItem]);
+    const getMenuItemByPath = () => {
+      const allMenuItems = [
+        ...baseMenu.main,
+        ...baseMenu.resourceOrderManagement,
+        ...baseMenu.pricing,
+        ...baseMenu.personal,
+        ...(isAdmin ? adminMenuItems : [])
+      ];
 
-  useEffect(() => {
-    localStorage.setItem("openDropdowns", JSON.stringify(openDropdowns));
-  }, [openDropdowns]);
-
-  const handleItemClick = (item: MenuItem, parentLabel?: string) => {
-    if (item.children && item.children.length > 0) {
-      setOpenDropdowns((prev) =>
-        prev.includes(item.label) ? [] : [item.label]
+      const currentItem = allMenuItems.find(item => 
+        item.path && pathname.startsWith(item.path)
       );
+
+      if (currentItem) {
+        setActiveItem(currentItem.label);
+      }
+    };
+
+    if (!isLoading) {
+      getMenuItemByPath();
+    }
+  }, [pathname, isAdmin, isLoading]);
+
+  // ✅ Handle menu item clicks
+  const handleItemClick = (item: MenuItem) => {
+    if (item.onClick) {
+      item.onClick();
       return;
     }
-    if (item.path) router.push(item.path);
-    setActiveItem(item.label);
-    if (parentLabel) setOpenDropdowns([parentLabel]);
-    else setOpenDropdowns([]);
+    
+    if (item.path) {
+      router.push(item.path);
+      setActiveItem(item.label);
+    }
+    
+    if (window.innerWidth < 640) {
+      setIsOpen(false);
+    }
   };
 
-  const renderItem = (item: MenuItem, isChild = false, parentLabel?: string) => {
-    const hasChildren = item.children && item.children.length > 0;
-    const isDropdownOpen = openDropdowns.includes(item.label);
+  // ✅ Render menu item
+  const renderItem = (item: MenuItem) => {
     const isActive = activeItem === item.label;
-
+    
     return (
-      <div key={item.label} className="flex flex-col gap-1">
-        <button
-          onClick={() => handleItemClick(item, parentLabel)}
-          className={`flex items-center justify-between gap-3 px-6 py-3 rounded-xl font-medium transition-colors
-            ${isActive
-              ? "bg-[#C9A040] text-[#212121]"
-              : "bg-[#F5F5F5] border border-[#AEAEAE] text-[#212121] hover:bg-yellow-100"
-            }
-            ${item.danger ? " hover:bg-red-100" : ""}
-          `}
-        >
-          <div className="flex items-center gap-3">
-            {item.icon}
-            {item.label}
-          </div>
-          {hasChildren && (
-            <span>
-              {isDropdownOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </span>
-          )}
-        </button>
-
-        {hasChildren && isDropdownOpen && (
-          <div className="flex flex-col gap-1">
-            {item.children!.map((child) => renderItem(child, true, item.label))}
-          </div>
-        )}
-      </div>
+      <button
+        key={item.label}
+        onClick={() => handleItemClick(item)}
+        className={`flex items-center gap-3 w-full px-6 py-3 rounded-xl font-medium transition-colors text-left
+          ${isActive
+            ? "bg-[#C9A040] text-[#212121]"
+            : "bg-[#F5F5F5] border border-[#AEAEAE] text-[#212121] hover:bg-yellow-100"
+          }
+          ${item.danger ? "hover:bg-red-100" : ""}
+        `}
+      >
+        {item.icon}
+        <span>{item.label}</span>
+      </button>
     );
   };
 
+  // ✅ Main sidebar content with scrollable area
   const SidebarContent = () => (
-    <aside className="w-full min-h-screen flex flex-col gap-6 p-4 bg-white shadow-sm font-[Poppins] rounded-lg text-gray-800 ">
-      <Section title="Main">{menu.main.map((item) => renderItem(item))}</Section>
-      <Section title="Resource & Order Management">
-        {menu.resourceOrderManagement.map((item) => renderItem(item))}
-      </Section>
-      <Section title="Pricing & Discounts">
-        {menu.pricing.map((item) => renderItem(item))}
-      </Section>
-      <Section title="Personal Information">
-        {menu.personal.map((item) => renderItem(item))}
-      </Section>
+    <aside className="w-full flex flex-col bg-white shadow-sm font-[Poppins]">
+      {/* Scrollable content area with fixed height */}
+      <div className="flex-1  overflow-y-auto" style={{ maxHeight: 'calc(80vh - 1rem)' }}>
+        <div className="p-4 flex flex-col gap-6">
+          {/* Loading State */}
+          {isLoading ? (
+            <div className="flex flex-col gap-4 p-4">
+              <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          ) : (
+            <>
+              {/* Regular Menu Sections */}
+              <Section title="Main">
+                {baseMenu.main.map((item) => renderItem(item))}
+              </Section>
+              
+              <Section title="Resource & Order Management">
+                {baseMenu.resourceOrderManagement.map((item) => renderItem(item))}
+              </Section>
+              
+              <Section title="Pricing & Discounts">
+                {baseMenu.pricing.map((item) => renderItem(item))}
+              </Section>
+              
+              {/* Admin Section - ONLY show when user is admin */}
+              {isAdmin === true && (
+                <Section title="Administration">
+                  {adminMenuItems.map((item) => renderItem(item))}
+                </Section>
+              )}
+              
+              <Section title="Personal Information">
+                {baseMenu.personal.map((item) => renderItem(item))}
+              </Section>
+            </>
+          )}
+        </div>
+      </div>
+      
+      {/* Fixed footer at bottom with user info */}
+      <div className="border-t border-gray-200 bg-white p-4 shrink-0">
+        <div className="text-xs text-gray-500">
+          {userEmail ? (
+            <>
+              Logged in as: <span className="font-medium">{userEmail}</span>
+              {isAdmin && <span className="ml-2 text-blue-500">(Admin)</span>}
+            </>
+          ) : (
+            <span className="text-red-500">Not logged in</span>
+          )}
+        </div>
+      </div>
     </aside>
   );
 
   return (
-    <div className="relative text-gray-800">
-      <div className="sm:hidden p-4 flex justify-between items-center bg-white shadow-md">
-        <button onClick={() => setIsOpen(!isOpen)}>
+    <div className="relative">
+      {/* Mobile Menu Button */}
+      <div className="sm:hidden p-4 flex justify-between items-center bg-white shadow-md fixed top-0 left-0 right-0 z-50">
+        <button onClick={() => setIsOpen(!isOpen)} className="z-50">
           {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
-        <span className="font-bold"></span>
       </div>
 
-      <div className={`rounded-lg fixed top-0 left-0 h-full z-40 transform bg-white sm:static sm:translate-x-0 transition-transform duration-300 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      {/* Sidebar */}
+      <div className={`
+        fixed top-0 left-0 h-screen z-40 transform bg-white 
+        sm:relative sm:top-0 sm:left-0 sm:h-screen sm:translate-x-0 
+        transition-transform duration-300 ease-in-out
+        ${isOpen ? "translate-x-0" : "-translate-x-full sm:translate-x-0"}
+      `}>
         <SidebarContent />
       </div>
 
+      {/* Overlay for mobile */}
       {isOpen && (
-        <div onClick={() => setIsOpen(false)} className="fixed inset-0 bg-black/40 sm:hidden" />
+        <div 
+          onClick={() => setIsOpen(false)} 
+          className="fixed inset-0 bg-black/40 sm:hidden z-30"
+        />
       )}
     </div>
   );
@@ -220,7 +274,7 @@ const Sidebar = () => {
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <div className="flex flex-col gap-3">
     <h2 className="text-xs font-semibold text-[#717171]">{title}</h2>
-    <div className="flex flex-col gap-3">{children}</div>
+    <div className="flex flex-col gap-2">{children}</div>
   </div>
 );
 

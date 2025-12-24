@@ -47,7 +47,7 @@ const CategoryCard: React.FC<CardProps> = ({ name, amount, icon }) => (
   <div className="bg-white rounded-lg p-6 border border-gray-200 flex items-center justify-between min-h-[150px]">
     <div>
       <h3 className=" text-gray-600 font-montserrat font-semibold text-[18px] leading-[26px] tracking-normal">{name}</h3>
-      <p className="text-2xl font-bold text-gray-900">${amount}</p>
+      <p className="text-2xl font-bold text-gray-900">${amount.toFixed(2)}</p>
     </div>
     <div className="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center mt-32">
       {icon}
@@ -65,7 +65,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ label, amount, icon }) => (
   <div className="bg-white rounded-lg p-6 border border-gray-200 flex items-center justify-between min-h-[150px]">
     <div>
       <h3 className="text-gray-600 font-montserrat font-semibold text-[18px] leading-[26px] tracking-normal">{label}</h3>
-      <p className="text-2xl font-bold text-gray-900">${amount}</p>
+      <p className="text-2xl font-bold text-gray-900">${amount.toFixed(2)}</p>
     </div>
     <div className="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center mt-32">
       {icon}
