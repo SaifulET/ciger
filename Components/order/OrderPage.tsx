@@ -8,6 +8,7 @@ interface Order {
   no: string;
   orderId: string;
   mobile: string;
+  orderid:string;
   payment: string;
   status: 'Processing' | 'Shipped' | 'Delivered' | 'Canceled'|'Refunded';
   _id: string; // Add _id to the interface
@@ -64,6 +65,7 @@ const OrderManagement: React.FC = () => {
     return orders.map((order, index) => ({
       no: (index + 1).toString().padStart(2, '0'),
       orderId: order.orderId,
+      orderid:order.orderid,
       mobile: order.phone,
       payment: `$${order.total.toFixed(2)}`,
       status: mapOrderStatus(order.state),
@@ -73,7 +75,7 @@ const OrderManagement: React.FC = () => {
 
   const filteredOrders: Order[] = useMemo(() => {
     return allOrders.filter(order =>
-      order._id.toLowerCase().includes(searchTerm.toLowerCase())
+      order.orderid.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [searchTerm, allOrders]);
 
@@ -188,7 +190,7 @@ const OrderManagement: React.FC = () => {
               {paginatedOrders.map((order: Order, idx: number) => (
                 <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
                   <td className="px-6 py-4 text-gray-700">{order.no}</td>
-                  <td className="px-6 py-4 font-medium text-gray-900">{order._id}</td>
+                  <td className="px-6 py-4 font-medium text-gray-900">{order.orderid}</td>
                   <td className="px-6 py-4 text-gray-700">{order.mobile}</td>
                   <td className="px-6 py-4 text-gray-700">{order.payment}</td>
                   <td className="px-6 py-4">
