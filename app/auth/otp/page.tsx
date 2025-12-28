@@ -100,7 +100,7 @@ const OTPVerification: React.FC = () => {
           <div className="w-[500px] h-24 flex items-center justify-center">
             <div className="text-center">
                {/* <Image src={Logo} alt='logo'/> */}
-              <Image src={logo} alt="logo"width={220} height={220} className='rounded-full' />
+              <Image src={logo} alt="logo"width={220} height={220} className='' />
             </div>
           </div>
 
