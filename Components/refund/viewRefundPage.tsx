@@ -9,7 +9,7 @@ import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/axios";
 
 // ================= TYPES =================
-type OrderStatus = "cancelled" | "delivered" | "shipped" | "processing"|"refunded";
+type OrderStatus = "cancelled" | "delivered" | "shipped" | "processing" | "refunded";
 
 interface StatusConfig {
   bg: string;
@@ -39,7 +39,7 @@ interface OrderData {
   orderId: string;
   orderid?: string;
   trackingNo: string;
-transactionId?:string;
+  transactionId?: string;
   placedOn: string;
   contact: ContactDetails;
   items: OrderItem[];
@@ -55,7 +55,8 @@ transactionId?:string;
 // ================= PAGE COMPONENT =================
 const OrderDetailsPage: React.FC = () => {
   const [orderStatus, setOrderStatus] = useState<OrderStatus>("cancelled");
-  const [isRefunded, setIsRefunded] = useState(false);
+  const [isRefunding, setIsRefunding] = useState(false);
+  const [refundError, setRefundError] = useState<string | null>(null);
   const [orderData, setOrderData] = useState<OrderData | null>(null);
 
   const { currentOrder, orderLoading, orderError, fetchOrderById } = useOrderStore();
@@ -75,11 +76,17 @@ const OrderDetailsPage: React.FC = () => {
   // Transform store data to component format
   useEffect(() => {
     if (currentOrder) {
-      // Ensure we only show cancelled orders
-      if (currentOrder.state !== 'cancelled') {
-        router.push('/pages/refunds');
-        return;
-      }
+      // Update orderStatus based on currentOrder state
+      const statusMap: Record<string, OrderStatus> = {
+        'cancelled': 'cancelled',
+        'refunded': 'refunded',
+        'delivered': 'delivered',
+        'shipped': 'shipped',
+        'processing': 'processing'
+      };
+
+      const status = statusMap[currentOrder.state] || 'processing';
+      setOrderStatus(status);
 
       const transformedData: OrderData = {
         orderId: currentOrder._id,
@@ -119,14 +126,15 @@ const OrderDetailsPage: React.FC = () => {
           status: "Paid", 
           amount: currentOrder.total 
         },
-        refund: false,
+        refund: currentOrder.state === 'refunded',
         total: currentOrder.total,
-        transactionId:currentOrder.transactionId
+        transactionId: currentOrder.transactionId
       };
 
       setOrderData(transformedData);
+      setRefundError(null); // Reset error when order data changes
     }
-  }, [currentOrder, router]);
+  }, [currentOrder]);
 
   const statusConfig: Record<OrderStatus, StatusConfig> = {
     cancelled: {
@@ -153,44 +161,119 @@ const OrderDetailsPage: React.FC = () => {
       border: "border-yellow-200",
       dotColor: "bg-[#B27B0E]",
     },
-     refunded: {
-      bg: "bg-[#FCEAEA]",
-      text: "text-[#DD2C2C]",
-      border: "border-red-200",
-      dotColor: "bg-[#DD2C2C]",
+    refunded: {
+      bg: "bg-[#EAFAF3]",
+      text: "text-[#29BB7D]",
+      border: "border-green-200",
+      dotColor: "bg-[#29BB7D]",
     },
   };
 
   const navigateToOrders = () => {
     router.push("/pages/refunds");
   };
- const param = useParams();
-const id = param.id as string;
 
-const handleRefundToggle = async () => {
-  setIsRefunded((prev) => !prev);
+  const id = orderId;
 
-  const data = {
-    state: "refunded",
-  };
-
-  try {
-    const refunds = await api.put(`/order/updateOrderById/${id}`, data);
-    console.log(refunds, "1649");
-    if(refunds.data.success){
-      const refundMail = await api.post("/mail/refundConfirmation", {
-          email: orderData?.contact.email,
-          orderId: orderData?.orderid,
-          transactionId: orderData?.transactionId,
-          refundAmount: orderData?.total,
-          status:"refunded"
-        });
-        console.log(refundMail,"185")
+  const handleRefundToggle = async () => {
+    // Prevent refund if already refunded
+    if (orderStatus === 'refunded') {
+      setRefundError('This order has already been refunded.');
+      return;
     }
-  } catch (error) {
-    console.error(error);
-  }
-};
+
+    if (!orderData?.transactionId) {
+      setRefundError('Transaction ID is required for refund.');
+      return;
+    }
+
+    setIsRefunding(true);
+    setRefundError(null);
+
+    try {
+      console.log('Starting refund process...');
+      
+      // Step 1: Process payment refund
+      console.log('Calling payment refund API...');
+      const refundResponse = await api.post("/payment/refund", {
+        transactionId: orderData.transactionId,
+        amount: orderData.total
+      });
+
+      
+      if (!refundResponse.data.success) {
+        throw new Error(refundResponse.data.error || 'Payment refund failed');
+      }
+
+      // Step 2: Update order status to refunded
+      console.log('Updating order status to refunded...');
+      const updateResponse = await api.put(`/order/updateOrderById/${id}`, {
+        state: "refunded"
+      });
+
+
+      if (updateResponse.data.success) {
+        // Step 3: Send refund confirmation email
+        console.log('Sending refund confirmation email...');
+        try {
+          const refundMail = await api.post("/mail/refundConfirmation", {
+            email: orderData.contact.email,
+            orderId: orderData.orderid,
+            transactionId: orderData.transactionId,
+            Amount: orderData.total,
+            status: "refunded"
+          });
+        } catch (emailError) {
+          console.warn('Email sending failed (proceeding anyway):', emailError);
+          // Continue even if email fails
+        }
+
+        // Update local state
+        setOrderStatus("refunded");
+        if (orderData) {
+          setOrderData({
+            ...orderData,
+            refund: true
+          });
+        }
+
+        // Refresh order data
+        await fetchOrderById(orderId);
+        
+        // Show success message
+      } else {
+        throw new Error('Failed to update order status');
+      }
+    } catch (error: unknown) {
+  console.error('Refund error:', error);
+  
+  // Type assertion - tell TypeScript what shape the error has
+  const err = error as {
+    response?: {
+      data?: {
+        details?: string;
+        error?: string;
+        message?: string;
+      };
+    };
+    message?: string;
+  };
+  
+  setRefundError(
+    err.response?.data?.details || 
+    err.response?.data?.error || 
+    err.response?.data?.message || 
+    err.message || 
+    'Refund failed. Please try again.'
+  );
+}
+      
+      // Don't update state if refund failed
+     
+     finally {
+      setIsRefunding(false);
+    }
+  };
 
   // Loading state
   if (orderLoading || !orderData) {
@@ -198,7 +281,7 @@ const handleRefundToggle = async () => {
       <div className="min-h-screen ml-8 flex items-center justify-center text-gray-800">
         <div className="text-center">
           <div className="text-lg font-semibold mb-4">Loading order details...</div>
-          <div className="text-gray-500">Fetching cancelled order information</div>
+          <div className="text-gray-500">Fetching order information</div>
         </div>
       </div>
     );
@@ -236,17 +319,37 @@ const handleRefundToggle = async () => {
               <span className="text-sm">Refund Management</span>
             </button>
             <ChevronLeft className="w-4 h-4 text-gray-400 rotate-180" />
-            <span className="text-sm text-gray-500">View Cancelled Order</span>
+            <span className="text-sm text-gray-500">View Order</span>
           </div>
         </div>
 
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
           <h1 className="text-3xl font-bold text-gray-900">Order Details</h1>
+          {orderStatus === 'refunded' && (
+            <div className={`px-4 py-2 rounded-lg ${statusConfig.refunded.bg} ${statusConfig.refunded.text} border ${statusConfig.refunded.border}`}>
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${statusConfig.refunded.dotColor}`}></div>
+                <span className="font-medium">Refunded</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
+      {/* ===== REFUND ERROR ===== */}
+      {refundError && (
+        <div className="mb-4 mx-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <span>{refundError}</span>
+          </div>
+        </div>
+      )}
+
       {/* ===== CONTACT DETAILS ===== */}
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
+      <div className="bg-white rounded-lg shadow-sm p-6 mb-4 mx-6">
         <h2 className="font-semibold text-[28px] leading-[36px] tracking-[0] mb-4">
           Contact Details
         </h2>
@@ -283,7 +386,7 @@ const handleRefundToggle = async () => {
       </div>
 
       {/* ===== REUSABLE COMPONENT ===== */}
-      <div className={`relative ${orderStatus === "cancelled" ? "pb-[60px] bg-white rounded-lg" : "pb-0"}`}>
+      <div className={`relative mx-6 ${orderStatus === "cancelled" ? "pb-[60px] bg-white rounded-lg" : "pb-0"}`}>
         <OrderSummary
           orderData={orderData}
           orderStatus={orderStatus}
@@ -295,13 +398,22 @@ const handleRefundToggle = async () => {
           <div className="absolute bottom-3 right-6">
             <button
               onClick={handleRefundToggle}
+              disabled={isRefunding}
               className={`px-6 py-2 rounded-lg font-semibold transition-all duration-300 ${
-                isRefunded
-                  ? "bg-[#F5F5F5] text-[#AEAEAE]"
+                isRefunding
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                   : "bg-[#C9A040] text-black hover:opacity-90"
               }`}
             >
-              {isRefunded ? "Refunded" : "Refund"}
+              {isRefunding ? (
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin h-4 w-4 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Processing...
+                </span>
+              ) : "Refund"}
             </button>
           </div>
         )}

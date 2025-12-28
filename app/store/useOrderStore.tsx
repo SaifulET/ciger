@@ -50,6 +50,16 @@ interface User {
   email: string;
 }
 
+export interface RefundDetails {
+  id: string;
+  status: 'succeeded' | 'failed' | 'pending' | 'processing';
+  amount: number;
+  transactionId: string;
+  createdAt: string;
+  reason?: string;
+}
+
+
 export interface ApiOrder {
   _id: string;
   name: string;
@@ -73,6 +83,7 @@ export interface ApiOrder {
   createdAt: string;
   updatedAt: string;
   __v: number;
+   refundDetails?: RefundDetails; 
 }
 
 interface OrderStore {

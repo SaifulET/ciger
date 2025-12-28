@@ -108,7 +108,7 @@ const OTPVerification: React.FC = () => {
           <div className="flex flex-col items-center gap-1 w-full max-w-[427px]">
             <h3 className="text-2xl font-semibold text-gray-900 text-center">Verify Code</h3>
             <p className="text-base text-gray-500 text-center leading-6">
-              We Sent OTP code to your email &quot;example@gmail.com&quot;. Enter the code below to verify
+              We Sent OTP code to your email. Enter the code below to verify
             </p>
           </div>
 
