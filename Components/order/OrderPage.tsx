@@ -1,29 +1,27 @@
 'use client'
 import { useState, useMemo, useEffect } from 'react';
 import { Eye, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useRouter, useSearchParams } from 'next/navigation'; // Add useSearchParams
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useOrderStore } from '@/app/store/useOrderStore';
 
 interface Order {
   no: string;
   orderId: string;
   mobile: string;
-  orderid:string;
+  orderid: string;
   payment: string;
-  status: 'Processing' | 'Shipped' | 'Delivered' | 'Canceled'|'Refunded';
-  _id: string; // Add _id to the interface
+  status: 'Processing' | 'Shipped' | 'Delivered' | 'Canceled' | 'Refunded';
+  _id: string;
 }
 
 const OrderManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const itemsPerPage: number = 8;
   
-  // Use URL search params to get and set page
   const searchParams = useSearchParams();
   const router = useRouter();
   const urlPage = searchParams.get('page');
   
-  // Initialize currentPage from URL or default to 1
   const [currentPage, setCurrentPage] = useState<number>(
     urlPage ? parseInt(urlPage) : 1
   );
@@ -34,22 +32,19 @@ const OrderManagement: React.FC = () => {
     fetchAllOrders();
   }, [fetchAllOrders]);
 
-  // Update URL when page changes
   useEffect(() => {
     if (currentPage > 1) {
       const params = new URLSearchParams(searchParams.toString());
       params.set('page', currentPage.toString());
       router.push(`?${params.toString()}`, { scroll: false });
     } else if (currentPage === 1 && urlPage) {
-      // Remove page param if it's page 1
       const params = new URLSearchParams(searchParams.toString());
       params.delete('page');
       router.push(`?${params.toString()}`, { scroll: false });
     }
   }, [currentPage, router, searchParams, urlPage]);
 
-  // Map API status to component status
-  const mapOrderStatus = (state: string): 'Processing' | 'Shipped' | 'Delivered' | 'Canceled'|'Refunded' => {
+  const mapOrderStatus = (state: string): 'Processing' | 'Shipped' | 'Delivered' | 'Canceled' | 'Refunded' => {
     switch (state) {
       case 'processing': return 'Processing';
       case 'shipped': return 'Shipped';
@@ -60,16 +55,15 @@ const OrderManagement: React.FC = () => {
     }
   };
 
-  // Convert API orders to component format - INCLUDING _id
   const allOrders: Order[] = useMemo(() => {
     return orders.map((order, index) => ({
       no: (index + 1).toString().padStart(2, '0'),
       orderId: order.orderId,
-      orderid:order.orderid,
+      orderid: order.orderid,
       mobile: order.phone,
       payment: `$${order.total.toFixed(2)}`,
       status: mapOrderStatus(order.state),
-      _id: order._id, // Include the MongoDB _id
+      _id: order._id,
     }));
   }, [orders]);
 
@@ -84,6 +78,56 @@ const OrderManagement: React.FC = () => {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+
+  // Function to generate page numbers with ellipsis
+  const getPageNumbers = (): (number | string)[] => {
+    const maxVisiblePages = 3;
+    const pages: (number | string)[] = [];
+    
+    if (totalPages <= maxVisiblePages + 2) {
+      // Show all pages if total pages are small
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Always show first page
+      pages.push(1);
+      
+      // Calculate start and end of visible page range
+      let startPage = Math.max(2, currentPage - 1);
+      let endPage = Math.min(totalPages - 1, currentPage + 1);
+      
+      // Adjust if we're at the beginning
+      if (currentPage <= 2) {
+        endPage = 3;
+      }
+      
+      // Adjust if we're at the end
+      if (currentPage >= totalPages - 1) {
+        startPage = totalPages - 2;
+      }
+      
+      // Add ellipsis after first page if needed
+      if (startPage > 2) {
+        pages.push('...');
+      }
+      
+      // Add visible page range
+      for (let i = startPage; i <= endPage; i++) {
+        pages.push(i);
+      }
+      
+      // Add ellipsis before last page if needed
+      if (endPage < totalPages - 1) {
+        pages.push('...');
+      }
+      
+      // Always show last page
+      pages.push(totalPages);
+    }
+    
+    return pages;
+  };
 
   const getStatusColor = (status: Order['status']): string => {
     switch (status) {
@@ -119,9 +163,7 @@ const OrderManagement: React.FC = () => {
     }
   };
 
-  // FIXED: Use _id instead of orderId for redirect
   const handleViewOrder = (orderId: string): void => {
-    // Pass current page when navigating to view order
     router.push(`/pages/order/viewOrder/${orderId}?page=${currentPage}`);
   };
 
@@ -149,6 +191,8 @@ const OrderManagement: React.FC = () => {
       </div>
     );
   }
+
+  const pageNumbers = getPageNumbers();
 
   return (
     <div className="min-h-screen ml-8 text-gray-800">
@@ -203,7 +247,7 @@ const OrderManagement: React.FC = () => {
                   </td>
                   <td className="px-6 py-4">
                     <button
-                      onClick={() => handleViewOrder(order._id)} 
+                      onClick={() => handleViewOrder(order._id)}
                       className="text-gray-600 hover:text-gray-900 transition-colors"
                       title="View"
                     >
@@ -230,18 +274,27 @@ const OrderManagement: React.FC = () => {
               <ChevronLeft size={20} />
             </button>
 
-            {Array.from({ length: totalPages }, (_, i: number) => i + 1).map((page: number) => (
-              <button
-                key={page}
-                onClick={() => handlePageChange(page)}
-                className={`w-10 h-10 rounded-lg font-medium transition-all ${
-                  currentPage === page
-                    ? ' text-[#C9A040] border-2 border-[#C9A040]'
-                    : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                {page}
-              </button>
+            {pageNumbers.map((page, index) => (
+              page === '...' ? (
+                <span
+                  key={`ellipsis-${index}`}
+                  className="w-10 h-10 flex items-center justify-center text-gray-500"
+                >
+                  ...
+                </span>
+              ) : (
+                <button
+                  key={page}
+                  onClick={() => handlePageChange(page as number)}
+                  className={`w-10 h-10 rounded-lg font-medium transition-all ${
+                    currentPage === page
+                      ? ' text-[#C9A040] border-2 border-[#C9A040]'
+                      : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  {page}
+                </button>
+              )
             ))}
 
             <button
