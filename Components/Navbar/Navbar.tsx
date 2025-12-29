@@ -29,6 +29,7 @@ const {UserLogoutRequest}=useUserStore()
       setIsAvatarDropdownOpen(!isAvatarDropdownOpen);
     
   };
+ 
   useEffect(()=>{
       Cookies.get("token")?"":router.push("/auth/signin")
     },[Cookies.get("token")])

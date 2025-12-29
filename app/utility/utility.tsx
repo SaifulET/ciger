@@ -50,3 +50,21 @@ export const clearAllAuthData = () => {
   
   console.log("All auth data cleared")
 }
+export const setAuthToken = (token: string, rememberMe = false): void => {
+  if (typeof window === 'undefined') return;
+  
+  if (rememberMe) {
+    localStorage.setItem('auth_token', token);
+    // Set a flag to indicate this is a persistent session
+    localStorage.setItem('persistent_session', 'true');
+  } else {
+    // Session storage will clear when tab closes
+    sessionStorage.setItem('auth_token', token);
+    // Remove persistent flag if it exists
+    localStorage.removeItem('persistent_session');
+  }
+};
+export const getAuthToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+};

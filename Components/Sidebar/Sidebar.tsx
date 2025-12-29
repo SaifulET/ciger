@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
   Menu,
@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { Analytics01Icon, BrandfetchIcon, Calendar03Icon, DashboardSquare01Icon, Discount01Icon, Image01Icon, Logout01Icon, Money04Icon, MoneyBag01Icon, Notification01Icon, PackageIcon, PencilEdit02Icon, UserGroupIcon, UserIcon, UserStar01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { getEmail, clearAllAuthData } from "@/app/utility/utility";
+import { getEmail, clearAllAuthData, getAuthToken } from "@/app/utility/utility";
 
 // ✅ MenuItem interface
 interface MenuItem {
@@ -53,8 +53,7 @@ const baseMenu: MenuStructure = {
       icon: <HugeiconsIcon icon={Logout01Icon} />, 
       danger: true,
       onClick: () => {
-        clearAllAuthData();
-        window.location.href = "/auth/signin";
+        handleManualLogout();
       }
     },
   ],
@@ -65,6 +64,24 @@ const adminMenuItems: MenuItem[] = [
   { label: "Employee", icon: <HugeiconsIcon icon={UserStar01Icon} />, path: "/pages/employee" },
 ];
 
+// ✅ Logout handler
+const handleManualLogout = () => {
+  // Send logout beacon if possible
+  if (navigator.sendBeacon) {
+    const token = getAuthToken();
+    if (token) {
+      const data = new FormData();
+      data.append('token', token);
+      navigator.sendBeacon('/api/auth/logout', data);
+    }
+  }
+  
+  clearAllAuthData();
+  // Dispatch event to notify other tabs/components
+  window.dispatchEvent(new CustomEvent('userLoggedOut'));
+  window.location.href = "/auth/signin";
+};
+
 const Sidebar = () => {
   const router = useRouter();
   const pathname = usePathname();
@@ -73,6 +90,164 @@ const Sidebar = () => {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [userEmail, setUserEmail] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
+  const [lastActivity, setLastActivity] = useState<number>(Date.now());
+  
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const tabCloseTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // ✅ Auto-logout when tab is closed
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Don't log out on page refresh
+      if (performance.navigation?.type === 1) {
+        return;
+      }
+      
+      // Logout when tab is closing
+      const token = getAuthToken();
+      if (token) {
+        // Use Beacon API to send logout request
+        const data = new FormData();
+        data.append('token', token);
+        data.append('logout_reason', 'tab_closed');
+        
+        // This will work even as the page is unloading
+        navigator.sendBeacon('/api/auth/logout', data);
+      }
+      
+      clearAllAuthData();
+      
+      // Optional: Show confirmation (not recommended for automatic logout)
+      // e.preventDefault();
+      // e.returnValue = '';
+    };
+
+    // ✅ Handle tab visibility changes
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        // User switched tab or minimized browser
+        // Start a timer for auto-logout after inactivity
+        tabCloseTimerRef.current = setTimeout(() => {
+          if (document.visibilityState === 'hidden') {
+            console.log('Tab hidden for too long, logging out...');
+            handleTabHiddenLogout();
+          }
+        }, 5 * 60 * 1000); // Logout after 5 minutes of tab inactivity
+      } else {
+        // User came back to the tab
+        if (tabCloseTimerRef.current) {
+          clearTimeout(tabCloseTimerRef.current);
+        }
+        resetInactivityTimer();
+      }
+    };
+
+    // ✅ Reset inactivity timer on user activity
+    const resetInactivityTimer = () => {
+      setLastActivity(Date.now());
+      
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+      }
+      
+      // Logout after 30 minutes of inactivity
+      inactivityTimerRef.current = setTimeout(() => {
+        handleInactivityLogout();
+      }, 30 * 60 * 1000); // 30 minutes
+    };
+
+    // ✅ Event listeners for user activity
+    const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    
+    activityEvents.forEach(event => {
+      document.addEventListener(event, resetInactivityTimer, { passive: true });
+    });
+
+    // ✅ Set up event listeners
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // ✅ Start inactivity timer
+    resetInactivityTimer();
+
+    // ✅ Cleanup function
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      
+      activityEvents.forEach(event => {
+        document.removeEventListener(event, resetInactivityTimer);
+      });
+      
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+      }
+      
+      if (tabCloseTimerRef.current) {
+        clearTimeout(tabCloseTimerRef.current);
+      }
+    };
+  }, []);
+
+  // ✅ Handle tab hidden logout
+  const handleTabHiddenLogout = () => {
+    const token = getAuthToken();
+    if (token) {
+      const data = new FormData();
+      data.append('token', token);
+      data.append('logout_reason', 'tab_inactive');
+      navigator.sendBeacon('/api/auth/logout', data);
+    }
+    
+    clearAllAuthData();
+    window.dispatchEvent(new CustomEvent('userLoggedOut'));
+    
+    // Redirect if user comes back to tab
+    if (document.visibilityState === 'visible') {
+      window.location.href = "/auth/signin";
+    }
+  };
+
+  // ✅ Handle inactivity logout
+  const handleInactivityLogout = () => {
+    console.log('Inactivity timeout - logging out');
+    
+    const token = getAuthToken();
+    if (token) {
+      const data = new FormData();
+      data.append('token', token);
+      data.append('logout_reason', 'inactivity');
+      navigator.sendBeacon('/api/auth/logout', data);
+    }
+    
+    clearAllAuthData();
+    window.dispatchEvent(new CustomEvent('userLoggedOut'));
+    window.location.href = "/auth/signin";
+  };
+
+  // ✅ Sync logout across tabs
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'logout' || e.key === 'auth_token' && !e.newValue) {
+        // Another tab logged out
+        clearAllAuthData();
+        window.location.href = "/auth/signin";
+      }
+    };
+
+    const handleLoggedOutEvent = () => {
+      clearAllAuthData();
+      window.location.href = "/auth/signin";
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('userLoggedOut', handleLoggedOutEvent);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('userLoggedOut', handleLoggedOutEvent);
+    };
+  }, []);
 
   // ✅ Simplified auth initialization
   useEffect(() => {
@@ -186,7 +361,7 @@ const Sidebar = () => {
   const SidebarContent = () => (
     <aside className="w-full flex flex-col bg-white shadow-sm font-[Poppins]">
       {/* Scrollable content area with fixed height */}
-      <div className="flex-1  overflow-y-auto" style={{ maxHeight: 'calc(80vh - 1rem)' }}>
+      <div className="flex-1 overflow-y-auto" style={{ maxHeight: 'calc(80vh - 1rem)' }}>
         <div className="p-4 flex flex-col gap-6">
           {/* Loading State */}
           {isLoading ? (
@@ -236,6 +411,9 @@ const Sidebar = () => {
           ) : (
             <span className="text-red-500">Not logged in</span>
           )}
+        </div>
+        <div className="text-xs text-gray-400 mt-1">
+          Auto-logout on tab close • Inactive in {Math.max(0, Math.floor((30 * 60 * 1000 - (Date.now() - lastActivity)) / 60000))} min
         </div>
       </div>
     </aside>
